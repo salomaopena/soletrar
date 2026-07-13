@@ -1,0 +1,37 @@
+<?= $this->extend('layouts/publico') ?>
+<?= $this->section('titulo') ?>Concurso Nacional de Soletração — Angola<?= $this->endSection() ?>
+<?= $this->section('conteudo') ?>
+
+<header class="hero-portal">
+  <div class="container">
+    <p class="rotulo-secao mb-2">Concurso Nacional de Soletração</p>
+    <h1>A língua portuguesa em palco, letra a letra.</h1>
+    <p class="lead texto-suave mt-3" style="max-width:52ch">
+      Alunos até à 8.ª classe de todas as províncias de Angola competem
+      da escola à final nacional.
+    </p>
+    <div class="d-flex gap-2 mt-4 flex-wrap">
+      <a class="btn btn-cns" href="<?= site_url('inscricao') ?>">Inscrever candidato</a>
+      <a class="btn btn-cns-contorno" href="<?= site_url('resultados') ?>">Ver resultados</a>
+    </div>
+  </div>
+</header>
+
+<div class="container pb-5">
+  <h2 class="h4 mb-4">Últimas notícias</h2>
+  <div class="row g-4">
+    <?php foreach ($destaques as $noticia): ?>
+      <div class="col-md-4">
+        <a class="cartao cartao--interativo p-3 h-100 d-block text-decoration-none text-reset"
+           href="<?= esc($noticia->urlPublica(), 'attr') ?>">
+          <h3 class="h6"><?= esc($noticia->titulo) ?></h3>
+          <p class="texto-suave small mb-0"><?= esc(excerto($noticia->conteudo ?? '', 120)) ?></p>
+        </a>
+      </div>
+    <?php endforeach ?>
+    <?php if ($destaques === []): ?>
+      <div class="col-12"><?= view('components/estado_vazio', ['palavra' => 'breve', 'mensagem' => 'Ainda não há notícias publicadas.']) ?></div>
+    <?php endif ?>
+  </div>
+</div>
+<?= $this->endSection() ?>

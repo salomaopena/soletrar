@@ -1,0 +1,12 @@
+/vendor/
+.env
+/writable/cache/*
+/writable/logs/*
+/writable/session/*
+/writable/uploads_privados/*
+/writable/uploads/*
+/writable/debugbar/*
+!/writable/**/.gitkeep
+/public/uploads/*
+!/public/uploads/.gitkeep
+.phpunit.result.cache
