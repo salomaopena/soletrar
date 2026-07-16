@@ -102,7 +102,25 @@ class EscolasController extends AdminBaseController
              'opcoes' => $this->opcoesProvincias()],
             ['nome' => 'municipio_id', 'rotulo' => 'Município', 'tipo' => 'select', 'obrigatorio' => true, 'largura' => 4,
              'opcoes' => $this->opcoesMunicipios()],
-            ['nome' => 'endereco', 'rotulo' => 'Endereço', 'largura' => 12],
+            ['nome' => 'subsistema', 'rotulo' => 'Subsistema', 'tipo' => 'select', 'largura' => 4,
+             'opcoes' => [
+                 'ensino_geral'           => 'Ensino geral',
+                 'tecnico_profissional'   => 'Técnico-profissional',
+                 'formacao_professores'   => 'Formação de professores',
+             ]],
+            ['nome' => 'nivel', 'rotulo' => 'Níveis leccionados', 'tipo' => 'multi', 'largura' => 4,
+             'ajuda' => 'O concurso vai até à 8.ª classe.',
+             'opcoes' => [
+                 'primario' => 'Primário (1.ª–6.ª)',
+                 'i_ciclo'  => 'I Ciclo (7.ª–9.ª)',
+                 'ii_ciclo' => 'II Ciclo (10.ª–13.ª)',
+             ]],
+            ['nome' => 'numero_alunos', 'rotulo' => 'N.º de alunos', 'tipo' => 'number', 'largura' => 4],
+            ['nome' => 'endereco', 'rotulo' => 'Endereço', 'tipo' => 'text', 'largura' => 12],
+            ['nome' => 'latitude', 'rotulo' => 'Latitude', 'tipo' => 'text', 'largura' => 4,
+             'ajuda' => 'Opcional (ex.: -8.83833)'],
+            ['nome' => 'longitude', 'rotulo' => 'Longitude', 'tipo' => 'text', 'largura' => 4,
+             'ajuda' => 'Opcional (ex.: 13.23444)'],
             ['nome' => 'telefone', 'rotulo' => 'Telefone', 'largura' => 4],
             ['nome' => 'email', 'rotulo' => 'E-mail', 'tipo' => 'email', 'largura' => 4],
             ['nome' => 'diretor_nome', 'rotulo' => 'Nome do diretor', 'largura' => 4],
@@ -125,10 +143,23 @@ class EscolasController extends AdminBaseController
     private function dados(): array
     {
         $d = $this->request->getPost([
-            'nome', 'tipo', 'provincia_id', 'municipio_id', 'endereco',
-            'telefone', 'email', 'diretor_nome',
+            'nome', 'tipo', 'subsistema', 'provincia_id', 'municipio_id',
+            'endereco', 'telefone', 'email', 'diretor_nome',
+            'numero_alunos', 'latitude', 'longitude',
         ]);
+
         $d['ativo'] = $this->request->getPost('ativo') ? 1 : 0;
+
+        // `nivel` é uma coluna SET: chega como array, grava-se separado por vírgulas.
+        $niveis = (array) $this->request->getPost('nivel');
+        $d['nivel'] = $niveis !== []
+            ? implode(',', array_intersect($niveis, ['primario', 'i_ciclo', 'ii_ciclo']))
+            : 'primario,i_ciclo';
+
+        // Numéricos vazios → NULL (não 0)
+        foreach (['numero_alunos', 'latitude', 'longitude'] as $campo) {
+            $d[$campo] = ($d[$campo] === '' || $d[$campo] === null) ? null : $d[$campo];
+        }
 
         return $d;
     }

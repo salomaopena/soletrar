@@ -68,7 +68,7 @@ class Validation extends BaseConfig
     public array $inscricaoPublica = [
         'nome_completo' => 'required|min_length[5]|max_length[180]',
         'data_nascimento' => 'required|valid_date[Y-m-d]|data_nao_futura|idade_entre[5,18]',
-        'genero' => 'required|in_list[feminino,masculino]',
+        'genero' => 'required|in_list[M,F]',
         'classe_atual' => 'required|classe_valida',
         'escola_id' => 'required|is_natural_no_zero',
         'categoria_id' => 'required|is_natural_no_zero',

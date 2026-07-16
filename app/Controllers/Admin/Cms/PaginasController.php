@@ -85,11 +85,28 @@ class PaginasController extends AdminBaseController
              'opcoes' => ['rascunho' => 'Rascunho', 'publicada' => 'Publicada', 'arquivada' => 'Arquivada']],
             ['nome' => 'conteudo', 'rotulo' => 'Conteúdo', 'tipo' => 'textarea', 'largura' => 12, 'linhas' => 14,
              'ajuda' => 'HTML permitido (sanitizado ao guardar).'],
-            ['nome' => 'meta_titulo', 'rotulo' => 'Meta-título (SEO)', 'largura' => 6],
+            ['nome' => 'parent_id', 'rotulo' => 'Página-mãe', 'tipo' => 'select', 'largura' => 6,
+             'opcoes' => $this->opcoesPaginas(),
+             'ajuda' => 'Para criar hierarquia (ex.: Sobre → História).'],
+            ['nome' => 'template', 'rotulo' => 'Template', 'tipo' => 'select', 'largura' => 3,
+             'opcoes' => ['' => 'Padrão', 'largura_total' => 'Largura total', 'contactos' => 'Contactos']],
+            ['nome' => 'meta_titulo', 'rotulo' => 'Meta-título (SEO)', 'tipo' => 'text', 'largura' => 6],
             ['nome' => 'ordem', 'rotulo' => 'Ordem', 'tipo' => 'number', 'largura' => 3],
             ['nome' => 'mostra_no_menu', 'rotulo' => 'Mostrar no menu', 'tipo' => 'checkbox'],
             ['nome' => 'meta_descricao', 'rotulo' => 'Meta-descrição (SEO)', 'tipo' => 'textarea', 'largura' => 12, 'linhas' => 2],
         ];
+    }
+
+    /** Opções de página-mãe (exclui a própria página, ao editar). */
+    private function opcoesPaginas(): array
+    {
+        $o = ['' => '— Nenhuma —'];
+
+        foreach (model('PaginaModel')->orderBy('titulo')->findAll() as $p) {
+            $o[$p->id] = $p->titulo;
+        }
+
+        return $o;
     }
 
     private function dados(): array
@@ -97,8 +114,12 @@ class PaginasController extends AdminBaseController
         helper('texto');
 
         $d = $this->request->getPost([
-            'titulo', 'conteudo', 'status', 'ordem', 'meta_titulo', 'meta_descricao',
+            'titulo', 'conteudo', 'status', 'ordem', 'template',
+            'meta_titulo', 'meta_descricao',
         ]);
+
+        $d['parent_id'] = $this->request->getPost('parent_id') ?: null;
+        $d['template']  = $d['template'] ?: null;
 
         $d['slug']           = slug_pt($d['titulo']);
         $d['ordem']          = (int) ($d['ordem'] ?: 0);

@@ -36,6 +36,11 @@ final class NoticiaService
     /** Cria um rascunho. Devolve o ID da notícia. */
     public function criarRascunho(array $dados, int $autorId): int
     {
+        // `categorias` e `tags` NÃO são colunas de `noticias` — são
+        // relações N:N. Têm de sair do array ANTES de chegar ao model,
+        // senão entram no INSERT e partem o SQL.
+        [$dados, $taxonomias] = $this->separarTaxonomias($dados);
+
         $dados = $this->prepararDados($dados);
         $dados['autor_id'] = $autorId;
         $dados['status']   = 'rascunho';
@@ -44,7 +49,7 @@ final class NoticiaService
         $this->model->db->transException(true)->transStart();
 
         $id = $this->model->insert($dados, true);
-        $this->sincronizarTaxonomias($id, $dados);
+        $this->sincronizarTaxonomias($id, $taxonomias);
 
         $this->model->db->transComplete();
 
@@ -54,6 +59,9 @@ final class NoticiaService
     public function atualizar(int $id, array $dados, int $userId): void
     {
         $noticia = $this->obterOuFalhar($id);
+
+        // Ver nota em criarRascunho(): taxonomias fora dos dados da tabela.
+        [$dados, $taxonomias] = $this->separarTaxonomias($dados);
 
         $dados = $this->prepararDados($dados);
         $dados['editor_id'] = $userId;
@@ -71,7 +79,7 @@ final class NoticiaService
         $this->model->db->transException(true)->transStart();
 
         $this->model->update($id, $dados);
-        $this->sincronizarTaxonomias($id, $dados);
+        $this->sincronizarTaxonomias($id, $taxonomias);
 
         $this->model->db->transComplete();
     }
@@ -136,7 +144,10 @@ final class NoticiaService
         if (isset($dados['conteudo'])) {
             $dados['conteudo'] = $this->sanitizador->limpar($dados['conteudo']);
 
-            $palavras = str_word_count(strip_tags($dados['conteudo']));
+            // str_word_count não conta bem palavras acentuadas (português).
+            $texto    = trim(strip_tags($dados['conteudo']));
+            $palavras = $texto === '' ? 0 : count(preg_split('/\s+/u', $texto));
+
             $dados['tempo_leitura_min'] = max(1, (int) ceil($palavras / 200));
         }
 
@@ -158,39 +169,74 @@ final class NoticiaService
         return $slug;
     }
 
-    private function sincronizarTaxonomias(int $noticiaId, array $dados): void
+    /**
+     * Retira do array os campos que NÃO são colunas de `noticias`.
+     *
+     * @return array{0: array, 1: array} [dadosDaTabela, taxonomias]
+     */
+    private function separarTaxonomias(array $dados): array
     {
-        if (array_key_exists('categorias', $dados)) {
-            $this->model->sincronizarCategorias($noticiaId, (array) $dados['categorias']);
+        $taxonomias = [
+            'categorias' => array_key_exists('categorias', $dados)
+                ? (array) $dados['categorias'] : null,
+            'tags'       => array_key_exists('tags', $dados)
+                ? (array) $dados['tags'] : null,
+        ];
+
+        unset($dados['categorias'], $dados['tags']);
+
+        return [$dados, $taxonomias];
+    }
+
+    private function sincronizarTaxonomias(int $noticiaId, array $taxonomias): void
+    {
+        // null = o formulário não enviou o campo → não mexer.
+        // [] = enviou vazio → limpar as relações.
+        if ($taxonomias['categorias'] !== null) {
+            $this->model->sincronizarCategorias($noticiaId, $taxonomias['categorias']);
         }
-        if (array_key_exists('tags', $dados)) {
+
+        if ($taxonomias['tags'] !== null) {
             // Tags chegam como nomes livres; o model cria as inexistentes.
-            $this->model->sincronizarTags($noticiaId, (array) $dados['tags']);
+            $this->model->sincronizarTags($noticiaId, $taxonomias['tags']);
         }
     }
 
     private function notificarTransicao(object $noticia, string $transicao, string $destino): void
     {
-        // Submissão para revisão → avisa quem pode publicar;
-        // publicação/devolução → avisa o autor.
-        match (true) {
-            $transicao === 'submeter' => service('notificador')->notificarGrupo(
-                'editor_noticias',
-                'cms_submetida',
-                ['titulo' => $noticia->titulo, 'id' => $noticia->id]
-            ),
-            $destino === 'publicada' => service('notificador')->notificarUtilizador(
-                $noticia->autor_id,
-                'cms_publicada',
-                ['titulo' => $noticia->titulo, 'url' => $noticia->urlPublica()]
-            ),
-            $transicao === 'devolver' => service('notificador')->notificarUtilizador(
-                $noticia->autor_id,
-                'cms_devolvida',
-                ['titulo' => $noticia->titulo]
-            ),
-            default => null,
-        };
+        // Cast defensivo: o valor pode vir como string (BD) e os services
+        // declaram `int $userId` — sem isto, TypeError.
+        $autorId = $noticia->autor_id !== null ? (int) $noticia->autor_id : 0;
+
+        // Submissão para revisão → avisa quem pode publicar.
+        if ($transicao === 'submeter') {
+            service('notificador')->notificarGrupo('editor_noticias', 'cms_submetida', [
+                'titulo' => (string) $noticia->titulo,
+                'id'     => (int) $noticia->id,
+            ]);
+
+            return;
+        }
+
+        // As restantes avisam o AUTOR — se existir.
+        if ($autorId === 0) {
+            return;
+        }
+
+        if ($destino === 'publicada') {
+            service('notificador')->notificarUtilizador($autorId, 'cms_publicada', [
+                'titulo' => (string) $noticia->titulo,
+                'url'    => $noticia->urlPublica(),
+            ]);
+
+            return;
+        }
+
+        if ($transicao === 'devolver') {
+            service('notificador')->notificarUtilizador($autorId, 'cms_devolvida', [
+                'titulo' => (string) $noticia->titulo,
+            ]);
+        }
     }
 
     private function obterOuFalhar(int $id): object

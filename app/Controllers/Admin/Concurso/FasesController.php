@@ -48,6 +48,9 @@ class FasesController extends CrudBaseController
             ['nome' => 'data_inicio', 'rotulo' => 'Início', 'tipo' => 'date', 'largura' => 4],
             ['nome' => 'data_fim', 'rotulo' => 'Fim', 'tipo' => 'date', 'largura' => 4],
             ['nome' => 'descricao', 'rotulo' => 'Descrição', 'tipo' => 'textarea', 'largura' => 12],
+            ['nome' => 'regras_especificas', 'rotulo' => 'Regras específicas desta fase',
+             'tipo' => 'textarea', 'largura' => 12, 'linhas' => 3,
+             'ajuda' => 'Ex.: nesta fase não se permite pedir etimologia.'],
         ];
     }
 

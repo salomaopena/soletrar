@@ -9,7 +9,7 @@
  *   <?= view('components/campo', [
  *       'nome'        => 'nome_completo',
  *       'rotulo'      => 'Nome completo',
- *       'tipo'        => 'text',      // text|email|date|datetime-local|number|tel|select|textarea|password
+ *       'tipo'        => 'text',      // text|email|date|datetime-local|number|tel|select|multi|textarea|password
  *       'valor'       => old('nome_completo'),
  *       'obrigatorio' => true,
  *       'opcoes'      => [1 => 'Opção'],   // só para select
@@ -25,7 +25,7 @@ $rotulo      = $rotulo      ?? '';
 $tipo        = $tipo        ?? 'text';
 $valor       = $valor       ?? '';
 $obrigatorio = ! empty($obrigatorio);
-$opcoes      = ($tipo === 'select') ? ($opcoes ?? []) : [];
+$opcoes      = in_array($tipo, ['select', 'multi'], true) ? ($opcoes ?? []) : [];
 $ajuda       = $ajuda       ?? null;
 $linhas      = $linhas      ?? 4;
 $erros       = $erros       ?? [];
@@ -51,6 +51,27 @@ $erro = is_array($erros) ? ($erros[$nome] ?? null) : null;
         </option>
       <?php endforeach ?>
     </select>
+
+  <?php elseif ($tipo === 'multi'): ?>
+    <?php
+    // Coluna SET: o valor guardado é uma lista separada por vírgulas.
+    $marcados = is_array($valor)
+        ? $valor
+        : array_filter(explode(',', (string) $valor));
+    ?>
+    <div class="border rounded p-2">
+      <?php foreach ($opcoes as $chave => $texto): ?>
+        <div class="form-check">
+          <input class="form-check-input" type="checkbox"
+                 name="<?= esc($nome, 'attr') ?>[]" value="<?= esc((string) $chave, 'attr') ?>"
+                 id="<?= esc($id . '-' . $chave, 'attr') ?>"
+                 <?= in_array((string) $chave, $marcados, true) ? 'checked' : '' ?>>
+          <label class="form-check-label" for="<?= esc($id . '-' . $chave, 'attr') ?>">
+            <?= esc((string) $texto) ?>
+          </label>
+        </div>
+      <?php endforeach ?>
+    </div>
 
   <?php elseif ($tipo === 'textarea'): ?>
     <textarea class="form-control <?= $erro ? 'is-invalid' : '' ?>"

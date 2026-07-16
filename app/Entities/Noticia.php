@@ -14,12 +14,24 @@ use CodeIgniter\Entity\Entity;
  */
 class Noticia extends Entity
 {
+    /**
+     * Sem casts, TUDO vem da BD como string — e um `int $userId` num
+     * service rebenta com TypeError. Todas as FK e contadores são
+     * declarados aqui.
+     */
     protected $casts = [
         'id'                   => 'integer',
+        'autor_id'             => '?integer',
+        'editor_id'            => '?integer',
+        'imagem_destacada_id'  => '?integer',
+        'provincia_id'         => '?integer',
+        'edicao_id'            => '?integer',
+        'evento_id'            => '?integer',
         'destaque'             => 'boolean',
         'fixada'               => 'boolean',
         'permitir_comentarios' => 'boolean',
         'visualizacoes'        => 'integer',
+        'tempo_leitura_min'    => '?integer',
         'data_publicacao'      => '?datetime',
         'data_agendada'        => '?datetime',
     ];

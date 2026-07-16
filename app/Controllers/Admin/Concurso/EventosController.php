@@ -369,6 +369,9 @@ class EventosController extends AdminBaseController
              'opcoes' => $ops(model('MunicipioModel')->orderBy('nome')->findAll())],
             ['nome' => 'escola_id', 'rotulo' => 'Escola (fase escolar)', 'tipo' => 'select', 'largura' => 4,
              'opcoes' => $ops(model('EscolaModel')->where('ativo', 1)->orderBy('nome')->findAll())],
+            ['nome' => 'data_fim_prevista', 'rotulo' => 'Fim previsto', 'tipo' => 'date', 'largura' => 4],
+            ['nome' => 'transmissao_url', 'rotulo' => 'Transmissão (URL)', 'tipo' => 'text', 'largura' => 8,
+             'ajuda' => 'Link do direto (YouTube, Facebook…).'],
             ['nome' => 'observacoes', 'rotulo' => 'Observações', 'tipo' => 'textarea', 'largura' => 12],
         ];
     }
@@ -387,8 +390,11 @@ class EventosController extends AdminBaseController
     {
         $d = $this->request->getPost([
             'nome', 'fase_id', 'categoria_id', 'local_id', 'escola_id',
-            'municipio_id', 'provincia_id', 'data_evento', 'status', 'observacoes',
+            'municipio_id', 'provincia_id', 'data_evento', 'data_fim_prevista',
+            'status', 'transmissao_url', 'observacoes',
         ]);
+
+        $d['data_fim_prevista'] = $d['data_fim_prevista'] ?: null;
 
         // FK vazias → NULL (nunca 0)
         foreach (['local_id', 'escola_id', 'municipio_id', 'provincia_id'] as $fk) {

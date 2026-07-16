@@ -109,6 +109,9 @@ class EdicoesController extends AdminBaseController
             ['nome' => 'classe_maxima', 'rotulo' => 'Classe máxima', 'tipo' => 'number', 'largura' => 3],
             ['nome' => 'idade_minima', 'rotulo' => 'Idade mínima', 'tipo' => 'number', 'largura' => 3],
             ['nome' => 'idade_maxima', 'rotulo' => 'Idade máxima', 'tipo' => 'number', 'largura' => 3],
+            ['nome' => 'regulamento_url', 'rotulo' => 'Regulamento (URL)', 'tipo' => 'text', 'largura' => 6,
+             'ajuda' => 'Link do PDF do regulamento oficial.'],
+            ['nome' => 'cartaz_url', 'rotulo' => 'Cartaz (URL)', 'tipo' => 'text', 'largura' => 6],
         ];
     }
 
@@ -130,6 +133,7 @@ class EdicoesController extends AdminBaseController
             'nome', 'ano', 'tema', 'descricao', 'status',
             'data_inicio', 'data_fim',
             'classe_minima', 'classe_maxima', 'idade_minima', 'idade_maxima',
+            'regulamento_url', 'cartaz_url',
         ]);
 
         foreach (['data_abertura_inscricoes', 'data_encerramento_inscricoes'] as $campo) {

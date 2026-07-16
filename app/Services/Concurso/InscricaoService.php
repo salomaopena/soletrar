@@ -1,10 +1,8 @@
 <?php
 
-declare(strict_types=1);
-
 namespace App\Services\Concurso;
 
-use App\Exceptions\AutorizacaoException;
+use CodeIgniter\Shield\Entities\User;
 use App\Models\InscricaoModel;
 use App\Services\Comum\Escopo;
 use CodeIgniter\Database\ConnectionInterface;
@@ -35,32 +33,38 @@ final class InscricaoService
      */
     public function inscrever(array $candidato, array $encarregado, int $edicaoId, int $categoriaId): array
     {
-        $edicao    = $this->obterEdicao($edicaoId);
+        $edicao = $this->obterEdicao($edicaoId);
         $categoria = $this->obterCategoria($categoriaId, $edicaoId);
-        $escola    = $this->obterEscola((int) $candidato['escola_id']);
+        $escola = $this->obterEscola((int) $candidato['escola_id']);
 
         // ---- Prazo de inscrições (datas da edição, comparadas em UTC) ----
         $agora = Time::now('UTC');
-        if (! service('dataHora')->dentroDoPrazo(
-            $edicao->data_abertura_inscricoes,
-            $edicao->data_encerramento_inscricoes,
-            $agora
-        )) {
+        if (
+            !service('dataHora')->dentroDoPrazo(
+                $edicao->data_abertura_inscricoes,
+                $edicao->data_encerramento_inscricoes,
+                $agora
+            )
+        ) {
             throw new RuntimeException(lang('Concurso.inscricoesFechadas'));
         }
 
         // ---- RN-03: classe e idade compatíveis com a categoria ----
-        if ((int) $candidato['classe_atual'] < $categoria->classe_minima
-            || (int) $candidato['classe_atual'] > $categoria->classe_maxima) {
+        if (
+            (int) $candidato['classe_atual'] < $categoria->classe_minima
+            || (int) $candidato['classe_atual'] > $categoria->classe_maxima
+        ) {
             throw new RuntimeException(lang('Concurso.classeForaDaCategoria'));
         }
 
         $referencia = Time::parse($edicao->data_inicio ?? $agora->toDateString(), 'UTC');
-        $idade      = Time::parse($candidato['data_nascimento'], 'UTC')
+        $idade = Time::parse($candidato['data_nascimento'], 'UTC')
             ->difference($referencia)->getYears();
 
-        if (($categoria->idade_minima !== null && $idade < $categoria->idade_minima)
-            || ($categoria->idade_maxima !== null && $idade > $categoria->idade_maxima)) {
+        if (
+            ($categoria->idade_minima !== null && $idade < $categoria->idade_minima)
+            || ($categoria->idade_maxima !== null && $idade > $categoria->idade_maxima)
+        ) {
             throw new RuntimeException(lang('Concurso.idadeForaDaCategoria'));
         }
 
@@ -78,7 +82,7 @@ final class InscricaoService
 
         // O número é gerado ANTES do candidato: é ele que o guarda
         // (coluna `numero_inscricao` vive em `candidatos`, não em `inscricoes`).
-        $numero      = $this->gerarNumeroInscricao($edicao, $provinciaId);
+        $numero = $this->gerarNumeroInscricao($edicao, $provinciaId);
         $candidatoId = $this->criarCandidato($candidato, $escola, $provinciaId, $numero);
 
         // RN-02: uma inscrição por edição (a UNIQUE do BD é a rede final;
@@ -96,27 +100,29 @@ final class InscricaoService
         $uuid = service('uuid')->v4();
 
         $inscricaoId = $this->inscricoes->insert([
-            'uuid'           => $uuid,
-            'candidato_id'   => $candidatoId,
-            'edicao_id'      => $edicaoId,
-            'categoria_id'   => $categoriaId,
-            'provincia_id'   => $provinciaId,
-            'escola_id'      => $escola->id,
-            'data_inscricao' => $agora->toDateTimeString(),
-            'status'         => 'pendente',
+            'uuid' => $uuid,
+            'candidato_id' => $candidatoId,
+            'edicao_id' => $edicaoId,
+            'categoria_id' => $categoriaId,
+            'provincia_id' => $provinciaId,
+            'escola_id' => $escola->id,
+            'data_inscricao' => utc_agora(),
+            'status' => 'pendente',
+            'observacoes' => $candidato['notas'] ?? null,
+            'created_at' => utc_agora(),
         ], true);
 
         $this->db->transComplete();
 
         // Notificação fora da transação (a falha de um SMS não desfaz a inscrição).
         service('notificador')->notificar('inscricao_recebida', [
-            'email'    => $encarregado['email'] ?? null,
+            'email' => $encarregado['email'] ?? null,
             'telefone' => $encarregado['telefone'],
         ], [
-            'candidato_nome'      => $candidato['nome_completo'],
-            'encarregado_nome'    => $encarregado['nome_completo'],
-            'numero_inscricao'    => $numero,
-            'edicao_nome'         => $edicao->nome,
+            'candidato_nome' => $candidato['nome_completo'],
+            'encarregado_nome' => $encarregado['nome_completo'],
+            'numero_inscricao' => $numero,
+            'edicao_nome' => $edicao->nome,
             'link_acompanhamento' => site_url('inscricao/estado/'
                 . service('urlCrypt')->cifrarLinkExterno($inscricaoId, 'comprovativo')),
         ]);
@@ -135,9 +141,9 @@ final class InscricaoService
         }
 
         $this->inscricoes->update($inscricaoId, [
-            'status'         => 'validada',
-            'validada_por'   => $porUserId,
-            'data_validacao' => Time::now('UTC')->toDateTimeString(),
+            'status' => 'validada',
+            'validada_por' => $porUserId,
+            'data_validacao' => utc_agora(),
         ]);
 
         $this->notificarEncarregado($inscricao, 'inscricao_validada');
@@ -149,10 +155,10 @@ final class InscricaoService
         service('autorizacao')->exigirEscopo($escopo, $inscricao);
 
         $this->inscricoes->update($inscricaoId, [
-            'status'          => 'rejeitada',
+            'status' => 'rejeitada',
             'motivo_rejeicao' => $motivo,
-            'validada_por'    => $porUserId,
-            'data_validacao'  => Time::now('UTC')->toDateTimeString(),
+            'validada_por' => $porUserId,
+            'data_validacao' => utc_agora(),
         ]);
 
         $this->notificarEncarregado($inscricao, 'inscricao_rejeitada', ['motivo' => $motivo]);
@@ -193,25 +199,30 @@ final class InscricaoService
     private function criarCandidato(array $dados, object $escola, int $provinciaId, string $numero): int
     {
         $this->db->table('candidatos')->insert([
-            'uuid'             => service('uuid')->v4(),
+            'uuid' => service('uuid')->v4(),
+            'user_id' => /*$this->obterOuCriarUsuario($dados) ??*/ null,
             'numero_inscricao' => $numero,
-            'nome_completo'    => $dados['nome_completo'],
-            'nome_preferido'   => $dados['nome_preferido'] ?? null,
-            'genero'           => $dados['genero'],
-            'data_nascimento'  => $dados['data_nascimento'],
-            'bi_numero'        => $dados['bi_numero'] ?? null,
-            'cedula_numero'    => $dados['cedula_numero'] ?? null,
-            'escola_id'        => $escola->id,
-            'provincia_id'     => $provinciaId,
-            'municipio_id'     => $escola->municipio_id,
-            'classe_atual'     => (int) $dados['classe_atual'],
-            'turma'            => $dados['turma'] ?? null,
-            'telefone_contacto'=> $dados['telefone_contacto'] ?? null,
-            'email_contacto'   => $dados['email_contacto'] ?? null,
+            'nome_completo' => $dados['nome_completo'],
+            'nome_preferido' => $dados['nome_preferido'] ?? null,
+            'genero' => $dados['genero'],
+            'data_nascimento' => $dados['data_nascimento'],
+            'bi_numero' => $dados['bi_numero'] ?? null,
+            'cedula_numero' => $dados['cedula_numero'] ?? null,
+            'escola_id' => $escola->id,
+            'provincia_id' => $provinciaId,
+            'municipio_id' => $escola->municipio_id,
+            'classe_atual' => (int) $dados['classe_atual'],
+            'turma' => $dados['turma'] ?? null,
+            'endereco' => $dados['endereco'] ?? null,
+            'telefone_contacto' => $dados['telefone_contacto'] ?? null,
+            'email_contacto' => $dados['email_contacto'] ?? null,
             'tem_necessidades_especiais' => (int) ($dados['tem_necessidades_especiais'] ?? 0),
-            'descricao_necessidades'     => $dados['descricao_necessidades'] ?? null,
-            'idioma_materno'   => $dados['idioma_materno'] ?? null,
-            'created_at'       => utc_agora(),
+            'descricao_necessidades' => $dados['descricao_necessidades'] ?? null,
+            'idioma_materno' => $dados['idioma_materno'] ?? null,
+            'outros_idiomas' => $dados['outros_idiomas'] ?? null,
+            'notas' => $dados['notas'] ?? null,
+            'ativo' => 1,
+            'created_at' => utc_agora(),
         ]);
 
         return (int) $this->db->insertID();
@@ -220,19 +231,53 @@ final class InscricaoService
     private function criarEncarregado(int $candidatoId, array $dados): void
     {
         $this->db->table('encarregados_educacao')->insert([
-            'candidato_id'     => $candidatoId,
-            'nome_completo'    => $dados['nome_completo'],
-            'parentesco'       => $dados['parentesco'],
-            'bi_numero'        => $dados['bi_numero'] ?? null,
-            'telefone'         => $dados['telefone'],
-            'telefone_alt'     => $dados['telefone_alt'] ?? null,
-            'email'            => $dados['email'] ?? null,
-            'principal'        => 1,
-            'autorizou'        => 1,
+            'user_id' => /*$this->obterOuCriarUsuario($dados) ??*/ null,
+            'candidato_id' => $candidatoId,
+            'nome_completo' => $dados['nome_completo'],
+            'parentesco' => $dados['parentesco'],
+            'bi_numero' => $dados['bi_numero'] ?? null,
+            'telefone' => $dados['telefone'],
+            'telefone_alt' => $dados['telefone_alt'] ?? null,
+            'email' => $dados['email'] ?? null,
+            'endereco' => $dados['endereco'] ?? null,
+            'profissao' => $dados['profissao'] ?? null,
+            'principal' => 1,
+            'autorizou' => 1,
             'data_autorizacao' => utc_agora(),
-            'created_at'       => utc_agora(),
+            'created_at' => utc_agora(),
         ]);
     }
+
+
+    private function obterOuCriarUsuario(array $dados): int
+    {
+        $users = auth()->getProvider();
+        $user = $users->findByCredentials(['email' => $dados['email'] ?? null]);
+
+        if ($user !== null && $user->active) {
+            return $user->id ?? null;
+        }
+
+
+        $senhaTemporaria = bin2hex(random_bytes(8));
+
+        $novoUser = new User([
+            'username' => $dados['email'],
+            'email' => $dados['email'],
+            'password' => $senhaTemporaria,
+        ]);
+
+        $users->save($novoUser);
+
+       
+        $novoUser = $users->findById($users->getInsertID());
+        $novoUser->activate();
+        $users->addToDefaultGroup($novoUser);
+
+        return $novoUser->id ?? null; // Retorna o id do novo usuário ou null se algo deu errado
+    }
+
+
 
     private function notificarEncarregado(object $inscricao, string $evento, array $extra = []): void
     {
@@ -244,12 +289,13 @@ final class InscricaoService
             return;
         }
 
-        service('notificador')->notificar($evento,
+        service('notificador')->notificar(
+            $evento,
             ['email' => $enc->email, 'telefone' => $enc->telefone],
             $extra + [
-                'candidato_nome'   => $inscricao->nome_completo ?? '',
+                'candidato_nome' => $inscricao->nome_completo ?? '',
                 'numero_inscricao' => $inscricao->numero_inscricao ?? '',
-                'provincia'        => $inscricao->provincia ?? '',
+                'provincia' => $inscricao->provincia ?? '',
             ]
         );
     }

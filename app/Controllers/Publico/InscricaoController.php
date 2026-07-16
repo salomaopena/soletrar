@@ -1,6 +1,5 @@
 <?php
 
-declare(strict_types=1);
 
 namespace App\Controllers\Publico;
 
@@ -46,6 +45,7 @@ class InscricaoController extends BaseController
         $edicao = model('EdicaoModel')->edicaoAtivaParaInscricao()
             ?? throw \CodeIgniter\Exceptions\PageNotFoundException::forPageNotFound();
 
+            
         // Validação de formulário (regras nomeadas em Config/Validation.php).
         if (! $this->validate('inscricaoPublica')) {
             return redirect()->back()->withInput()
@@ -53,6 +53,7 @@ class InscricaoController extends BaseController
         }
 
         $post = $this->request->getPost();
+        
 
         try {
             $resultado = service('inscricoes')->inscrever(
@@ -61,20 +62,34 @@ class InscricaoController extends BaseController
                     'nome_preferido'   => $post['nome_preferido'] ?? null,
                     'genero'           => $post['genero'],
                     'data_nascimento'  => $post['data_nascimento'],
-                    'cedula_numero'    => $post['cedula_numero'] ?? null,
-                    'escola_id'        => (int) $post['escola_id'],   // província deriva daqui
+                    'cedula_numero'    => $post['bi_numero'],
+                    'bi_numero'        => $post['bi_numero'] ?? null,
+                    'escola_id'        => (int) $post['escola_id'],
                     'classe_atual'     => (int) $post['classe_atual'],
                     'turma'            => $post['turma'] ?? null,
+
+                    'endereco' => $post['endereco'] ?? null,
+                    'telefone_contacto' => $post['telefone_contacto'] ?? null,
+                    'email_contacto' => $post['email_contacto'] ?? null,
+                    'tem_necessidades_especiais' => (int) ($post['tem_necessidades_especiais'] ?? 0),
+                    'descricao_necessidades' => $post['descricao_necessidades'] ?? null,
+                    'idioma_materno' => $post['idioma_materno'] ?? null,
+                    'outros_idiomas' => $post['outros_idiomas'] ?? null,
+                    'notas' => $post['notas'] ?? null,
                 ],
+
                 encarregado: [
                     'nome_completo' => $post['enc_nome_completo'],
+                    'bi_numero'     => $post['enc_bi_numero'] ?? null,
                     'parentesco'    => $post['enc_parentesco'],
                     'telefone'      => $post['enc_telefone'],
                     'email'         => $post['enc_email'] ?? null,
                     'autorizou'     => $this->request->getPost('enc_autorizou') === '1',
+                    'endereco'       => $post['endereco'] ?? null,
+                    'profissao'     => $post['enc_profissao'] ?? null,
                 ],
                 edicaoId: $edicao->id,
-                categoriaId: (int) $post['categoria_id'],
+                categoriaId: (int) $post['categoria_id'], 
             );
         } catch (RuntimeException $e) {
             // Mensagens de regra de negócio (prazo, classe, RN-02...) são traduzíveis.

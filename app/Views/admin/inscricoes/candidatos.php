@@ -73,7 +73,7 @@ $qs = http_build_query(array_filter($filtros, static fn ($v) => $v !== '' && $v 
       <label class="form-label small" for="genero">Género</label>
       <select class="form-select form-select-sm" id="genero" name="genero">
         <option value="">Todos</option>
-        <?php foreach (['feminino' => 'Feminino', 'masculino' => 'Masculino'] as $k => $r): ?>
+        <?php foreach (['M' => 'Masculino','F' => 'Feminino'] as $k => $r): ?>
           <option value="<?= $k ?>" <?= $filtros['genero'] === $k ? 'selected' : '' ?>><?= $r ?></option>
         <?php endforeach ?>
       </select>

@@ -130,15 +130,24 @@ abstract class CrudBaseController extends AdminBaseController
         foreach ($this->campos() as $c) {
             $nome = $c['nome'];
 
-            if (($c['tipo'] ?? 'text') === 'checkbox') {
+            $tipo = $c['tipo'] ?? 'text';
+
+            if ($tipo === 'checkbox') {
                 $dados[$nome] = $this->request->getPost($nome) ? 1 : 0;
+                continue;
+            }
+
+            // Colunas SET: chegam como array → gravam-se separadas por vírgulas.
+            if ($tipo === 'multi') {
+                $valores = (array) $this->request->getPost($nome);
+                $dados[$nome] = implode(',', array_filter($valores));
                 continue;
             }
 
             $valor = $this->request->getPost($nome);
 
             // Campos numéricos/FK vazios → NULL (evita erro de FK com 0).
-            if ($valor === '' && (($c['tipo'] ?? '') === 'number' || str_ends_with($nome, '_id'))) {
+            if ($valor === '' && ($tipo === 'number' || str_ends_with($nome, '_id'))) {
                 $valor = null;
             }
 

@@ -14,10 +14,18 @@ class PerfilController extends AdminBaseController
 {
     public function ver()
     {
+        $ops = static function (array $rs): array {
+            $o = ['' => '— Selecionar —'];
+            foreach ($rs as $r) { $o[$r->id] = $r->nome; }
+            return $o;
+        };
+
         return view('admin/sistema/perfil', [
             'utilizador' => auth()->user(),
             'perfil'     => $this->perfilDoUtilizador(auth()->id()),
             'escopo'     => $this->escopo,
+            'provincias' => $ops(model('ProvinciaModel')->orderBy('nome')->findAll()),
+            'municipios' => $ops(model('MunicipioModel')->orderBy('nome')->findAll()),
             'atribuicoes'=> db_connect()->table('coordenadores_atribuicao ca')
                 ->select('ca.nivel, ca.ativo, p.nome AS provincia, m.nome AS municipio, e.nome AS escola')
                 ->join('provincias p', 'p.id = ca.provincia_id', 'left')
@@ -31,19 +39,29 @@ class PerfilController extends AdminBaseController
     public function guardar()
     {
         if (! $this->validate([
-            'nome_completo' => 'required|min_length[3]|max_length[180]',
-            'telefone'      => 'permit_empty|telefone_ao',
-            'bi_numero'     => 'permit_empty|bi_angola',
+            'nome_completo'   => 'required|min_length[3]|max_length[180]',
+            'telefone'        => 'permit_empty|telefone_ao',
+            'telefone_alt'    => 'permit_empty|telefone_ao',
+            'bi_numero'       => 'permit_empty|bi_angola',
+            'data_nascimento' => 'permit_empty|valid_date|data_nao_futura',
         ])) {
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
-        $dados = [
-            'nome_completo' => $this->request->getPost('nome_completo'),
-            'telefone'      => $this->request->getPost('telefone'),
-            'genero'        => $this->request->getPost('genero') ?: null,
-            'bi_numero'     => $this->request->getPost('bi_numero'),
-        ];
+        $dados = $this->request->getPost([
+            'nome_completo', 'telefone', 'telefone_alt', 'bi_numero',
+            'data_nascimento', 'endereco', 'bio', 'idiomas', 'foto',
+        ]);
+
+        $dados['genero']       = $this->request->getPost('genero') ?: null;
+        $dados['provincia_id'] = $this->request->getPost('provincia_id') ?: null;
+        $dados['municipio_id'] = $this->request->getPost('municipio_id') ?: null;
+
+        foreach (['data_nascimento', 'endereco', 'bio', 'idiomas', 'foto', 'telefone_alt'] as $campo) {
+            if ($dados[$campo] === '') {
+                $dados[$campo] = null;
+            }
+        }
 
         $model  = model('PerfilUtilizadorModel');
         $perfil = $model->where('user_id', auth()->id())->first();

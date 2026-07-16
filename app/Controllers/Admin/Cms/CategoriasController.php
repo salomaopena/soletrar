@@ -24,6 +24,9 @@ class CategoriasController extends CrudBaseController
             ['nome' => 'nome', 'rotulo' => 'Nome', 'obrigatorio' => true, 'largura' => 6],
             ['nome' => 'cor', 'rotulo' => 'Cor (hex)', 'largura' => 3, 'ajuda' => 'Ex.: #2AA8A3'],
             ['nome' => 'ordem', 'rotulo' => 'Ordem', 'tipo' => 'number', 'largura' => 3],
+            ['nome' => 'parent_id', 'rotulo' => 'Categoria-mãe', 'tipo' => 'select', 'largura' => 6,
+             'opcoes' => ['' => '— Nenhuma —'] + $this->opcoes('NoticiaCategoriaModel'),
+             'ajuda' => 'Para subcategorias.'],
             ['nome' => 'descricao', 'rotulo' => 'Descrição', 'tipo' => 'textarea', 'largura' => 12],
         ];
     }

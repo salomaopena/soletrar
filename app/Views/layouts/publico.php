@@ -10,9 +10,9 @@ $menuHeader = service('menus')->arvore('header');
 
 if ($menuHeader === []) {
   $menuHeader = [
-    ['titulo' => 'Início', 'url_final' => site_url(), 'target' => '_self', 'filhos' => []],
-    ['titulo' => 'Notícias', 'url_final' => site_url('noticias'), 'target' => '_self', 'filhos' => []],
-    ['titulo' => 'Resultados', 'url_final' => site_url('resultados'), 'target' => '_self', 'filhos' => []],
+    ['titulo' => 'Início', 'url_final' => '/', 'target' => '_self', 'filhos' => []],
+    ['titulo' => 'Notícias', 'url_final' => '/noticias', 'target' => '_self', 'filhos' => []],
+    ['titulo' => 'Resultados', 'url_final' => '/resultados', 'target' => '_self', 'filhos' => []],
   ];
 }
 
@@ -59,7 +59,7 @@ $menuFooter = service('menus')->arvore('footer');
         <ul class="navbar-nav ms-auto align-items-lg-center gap-lg-1">
           <?php foreach ($menuHeader as $item): ?>
             <li class="nav-item">
-              <a class="nav-link" href="<?= esc($item['url_final'], 'attr') ?>" <?= ($item['target'] ?? '_self') === '_blank' ? 'target="_blank" rel="noopener"' : '' ?>>
+              <a class="nav-link" href="<?= site_url($item['url_final']) ?>" <?= ($item['target'] ?? '_self') === '_blank' ? 'target="_blank" rel="noopener"' : '' ?>>
                 <?= esc($item['titulo']) ?>
               </a>
             </li>
@@ -123,7 +123,7 @@ $menuFooter = service('menus')->arvore('footer');
               <li class="mb-1"><a href="<?= site_url('inscricao') ?>">Inscrições</a></li>
             <?php else: ?>
               <?php foreach ($menuFooter as $item): ?>
-                <li class="mb-1"><a href="<?= esc($item['url_final'], 'attr') ?>"><?= esc($item['titulo']) ?></a></li>
+                <li class="mb-1"><a href="<?= site_url($item['url_final']) ?>"><?= esc($item['titulo']) ?></a></li>
               <?php endforeach ?>
             <?php endif ?>
           </ul>

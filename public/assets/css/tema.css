@@ -64,6 +64,8 @@
 }
 
 /* --------------------------- 2. BASE --------------------------- */
+
+html,
 body {
   background: var(--cns-branco);
   color: var(--cns-tinta);
@@ -304,6 +306,21 @@ h3,
 
 .btn-cns-contorno:hover {
   background: var(--cns-marinho);
+  color: #fff;
+}
+
+
+.btn-cns-deletar {
+  border: 2px solid var(--cns-perigo);
+  color: var(--cns-perigo);
+  font-weight: 700;
+  border-radius: 999px;
+  padding: .55rem 1.35rem;
+  background: transparent;
+}
+
+.btn-cns-deletar:hover {
+  background: var(--cns-perigo);
   color: #fff;
 }
 

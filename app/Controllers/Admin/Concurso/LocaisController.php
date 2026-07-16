@@ -28,7 +28,11 @@ class LocaisController extends CrudBaseController
             ['nome' => 'municipio_id', 'rotulo' => 'Município', 'tipo' => 'select', 'largura' => 6,
              'opcoes' => $this->opcoes('MunicipioModel')],
             ['nome' => 'endereco', 'rotulo' => 'Endereço', 'largura' => 12],
-            ['nome' => 'contacto', 'rotulo' => 'Contacto', 'largura' => 6],
+            ['nome' => 'contacto', 'rotulo' => 'Contacto', 'tipo' => 'text', 'largura' => 6],
+            ['nome' => 'latitude', 'rotulo' => 'Latitude', 'tipo' => 'text', 'largura' => 3,
+             'ajuda' => 'Opcional'],
+            ['nome' => 'longitude', 'rotulo' => 'Longitude', 'tipo' => 'text', 'largura' => 3,
+             'ajuda' => 'Opcional'],
         ];
     }
 

@@ -45,13 +45,7 @@ class NoticiasController extends AdminBaseController
 
     public function nova()
     {
-        return view('admin/cms/noticias/formulario', [
-            'noticia'                => null,
-            'categorias'             => model('NoticiaCategoriaModel')->orderBy('ordem')->findAll(),
-            'categoriasSelecionadas' => [],
-            'tagsTexto'              => '',
-            'transicoes'             => [],
-        ]);
+        return view('admin/cms/noticias/formulario', $this->dadosDaView(null));
     }
 
     public function guardar()
@@ -73,14 +67,7 @@ class NoticiasController extends AdminBaseController
 
         $this->exigirAutoriaOuEdicao($noticia);
 
-        return view('admin/cms/noticias/formulario', [
-            'noticia'                => $noticia,
-            'categorias'             => model('NoticiaCategoriaModel')->orderBy('ordem')->findAll(),
-            'categoriasSelecionadas' => $this->categoriasDe($id),
-            'tagsTexto'              => $this->tagsDe($id),
-            // Botões gerados pela máquina de estados (só o que é permitido).
-            'transicoes'             => service('maquinaEstadosNoticia')->disponiveis($noticia->status),
-        ]);
+        return view('admin/cms/noticias/formulario', $this->dadosDaView($noticia));
     }
 
     public function atualizar(int $id)
@@ -111,17 +98,58 @@ class NoticiasController extends AdminBaseController
 
     // ------------------------------ Internos ------------------------------
 
+    /** Dados comuns às views de criação e edição. */
+    private function dadosDaView(?object $noticia): array
+    {
+        $ops = static function (array $rs, string $campo = 'nome'): array {
+            $o = [];
+            foreach ($rs as $r) { $o[$r->id] = $r->{$campo}; }
+            return $o;
+        };
+
+        return [
+            'noticia'                => $noticia,
+            'categorias'             => model('NoticiaCategoriaModel')->orderBy('ordem')->findAll(),
+            'categoriasSelecionadas' => $noticia ? $this->categoriasDe($noticia->id) : [],
+            'tagsTexto'              => $noticia ? $this->tagsDe($noticia->id) : '',
+            // Botões gerados pela máquina de estados (só o que é permitido).
+            'transicoes'             => $noticia
+                ? service('maquinaEstadosNoticia')->disponiveis($noticia->status)
+                : [],
+            // Selects do formulário
+            'media'      => model('MediaModel')->where('tipo', 'imagem')
+                                ->orderBy('created_at', 'DESC')->findAll(100),
+            'provincias' => $ops(model('ProvinciaModel')->orderBy('nome')->findAll()),
+            'edicoes'    => $ops(model('EdicaoModel')->orderBy('ano', 'DESC')->findAll()),
+            'eventos'    => $ops(model('EventoModel')->orderBy('data_evento', 'DESC')->findAll(50)),
+        ];
+    }
+
+    /** Recolhe TODOS os campos editáveis da tabela `noticias`. */
     private function dadosDoFormulario(): array
     {
         $post = $this->request->getPost([
             'titulo', 'subtitulo', 'resumo', 'conteudo',
-            'meta_titulo', 'meta_descricao', 'categorias', 'tags',
+            'tipo_post', 'formato', 'visibilidade', 'senha',
+            'imagem_destacada_id', 'provincia_id', 'edicao_id', 'evento_id',
+            'meta_titulo', 'meta_descricao', 'meta_keywords', 'og_imagem',
+            'categorias', 'tags',
         ]);
 
         // Checkboxes: ausentes no POST significam 0.
         $post['destaque']             = $this->request->getPost('destaque') ? 1 : 0;
         $post['fixada']               = $this->request->getPost('fixada') ? 1 : 0;
         $post['permitir_comentarios'] = $this->request->getPost('permitir_comentarios') ? 1 : 0;
+
+        // Chaves estrangeiras vazias → NULL (nunca 0, que rebentaria a FK).
+        foreach (['imagem_destacada_id', 'provincia_id', 'edicao_id', 'evento_id'] as $fk) {
+            $post[$fk] = ($post[$fk] === '' || $post[$fk] === null) ? null : (int) $post[$fk];
+        }
+
+        // A senha só faz sentido em conteúdo protegido.
+        if (($post['visibilidade'] ?? 'publica') !== 'protegida_senha') {
+            $post['senha'] = null;
+        }
 
         // Tags chegam como texto separado por vírgulas.
         $post['tags'] = array_filter(array_map('trim', explode(',', (string) ($post['tags'] ?? ''))));
