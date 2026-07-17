@@ -10,3 +10,5 @@
 /public/uploads/*
 !/public/uploads/.gitkeep
 .phpunit.result.cache
+/app/docs/*
+ROTEIROS_TUTORIAIS.md
