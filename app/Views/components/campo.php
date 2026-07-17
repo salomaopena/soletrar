@@ -30,7 +30,6 @@ $ajuda       = $ajuda       ?? null;
 $linhas      = $linhas      ?? 4;
 $erros       = $erros       ?? [];
 $placeholder = $placeholder ?? '';
-$lersomente   = ! empty($lerSomente);
 
 $id   = 'campo-' . $nome;
 $erro = is_array($erros) ? ($erros[$nome] ?? null) : null;
@@ -82,13 +81,20 @@ $erro = is_array($erros) ? ($erros[$nome] ?? null) : null;
               <?= $obrigatorio ? 'required' : '' ?>><?= esc((string) $valor) ?></textarea>
 
   <?php else: ?>
+    <?php
+    // datetime-local exige "AAAA-MM-DDTHH:MM" em hora local — um valor
+    // vindo direto da BD (UTC, com espaço e segundos) fica em branco no
+    // browser sem avisar, e ao gravar apaga a data (bug real corrigido).
+    $valorCampo = ($tipo === 'datetime-local')
+        ? campo_datetime_local((string) $valor)
+        : (string) $valor;
+    ?>
     <input class="form-control <?= $erro ? 'is-invalid' : '' ?>"
            id="<?= esc($id, 'attr') ?>" name="<?= esc($nome, 'attr') ?>"
            type="<?= esc($tipo, 'attr') ?>"
-           value="<?= esc((string) $valor, 'attr') ?>"
+           value="<?= esc($valorCampo, 'attr') ?>"
            placeholder="<?= esc($placeholder, 'attr') ?>"
-           <?= $obrigatorio ? 'required' : '' ?>
-           <?= $lersomente ? 'readonly' : '' ?>>
+           <?= $obrigatorio ? 'required' : '' ?>>
   <?php endif ?>
 
   <?php if ($erro): ?>

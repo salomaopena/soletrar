@@ -23,6 +23,14 @@ if (! function_exists('data_exibir')) {
     }
 }
 
+if (! function_exists('campo_datetime_local')) {
+    /** Formata um valor UTC para o formato do input datetime-local, em hora de Angola. */
+    function campo_datetime_local(\CodeIgniter\I18n\Time|string|null $valorUtc): string
+    {
+        return service('dataHora')->paraCampoDatetimeLocal($valorUtc);
+    }
+}
+
 if (! function_exists('idade')) {
     /** Idade em anos à data de hoje. */
     function idade(\CodeIgniter\I18n\Time|string $nascimento): int
