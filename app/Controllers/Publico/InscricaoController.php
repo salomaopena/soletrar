@@ -55,7 +55,7 @@ class InscricaoController extends BaseController
         $post = $this->request->getPost();
         
 
-        try {
+        try { 
             $resultado = service('inscricoes')->inscrever(
                 candidato: [
                     'nome_completo'    => $post['nome_completo'],

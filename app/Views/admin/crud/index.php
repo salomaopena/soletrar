@@ -14,7 +14,7 @@
  *                        ex.: 'chave' na tabela `configuracoes`, que não tem id)
  *   $vazio       string  mensagem de estado vazio
  */
-$campoId    = $campoId    ?? 'id';
+$campoId = $campoId ?? 'id';
 $podeEditar = $podeEditar ?? true;
 ?>
 <?= $this->extend('layouts/admin') ?>
@@ -33,57 +33,62 @@ $podeEditar = $podeEditar ?? true;
 <div class="cartao">
   <?php if (empty($registos)): ?>
     <?= view('components/estado_vazio', [
-        'palavra'  => 'vazio',
-        'mensagem' => $vazio ?? 'Ainda não há registos.',
-        'acao'     => ($podeCriar ?? true)
-            ? ['url' => site_url($rotaBase . '/nova'), 'rotulo' => 'Adicionar o primeiro']
-            : null,
+      'palavra' => 'vazio',
+      'mensagem' => $vazio ?? 'Ainda não há registos.',
+      'acao' => ($podeCriar ?? true)
+        ? ['url' => site_url($rotaBase . '/nova'), 'rotulo' => 'Adicionar o primeiro']
+        : null,
     ]) ?>
   <?php else: ?>
-    <div class="table-responsive">
-      <table class="table tabela-cns table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <?php foreach ($colunas as $def): ?>
-              <th><?= esc(is_array($def) ? $def['rotulo'] : $def) ?></th>
-            <?php endforeach ?>
-            <?php if ($podeEditar): ?><th class="text-end">Ações</th><?php endif ?>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($registos as $r): ?>
-            <tr>
-              <?php foreach ($colunas as $campo => $def): ?>
-                <?php
-                $tipo  = is_array($def) ? ($def['tipo'] ?? 'texto') : 'texto';
-                $valor = $r->{$campo} ?? null;
-                ?>
-                <td>
-                  <?php if ($tipo === 'badge' && $valor !== null): ?>
-                    <?= view('components/badge_estado', ['estado' => $valor]) ?>
-                  <?php elseif ($tipo === 'data'): ?>
-                    <span class="texto-suave small"><?= esc(data_exibir($valor, 'curta')) ?></span>
-                  <?php elseif ($tipo === 'bool'): ?>
-                    <?= $valor
-                        ? '<i class="bi bi-check-circle-fill text-success"></i>'
-                        : '<i class="bi bi-dash-circle text-muted"></i>' ?>
-                  <?php else: ?>
-                    <?= esc((string) ($valor ?? '—')) ?>
+    <div class="card">
+      <div class="card-body p-2">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <?php foreach ($colunas as $def): ?>
+                  <th><?= esc(is_array($def) ? $def['rotulo'] : $def) ?></th>
+                <?php endforeach ?>
+                <?php if ($podeEditar): ?>
+                  <th class="text-end">Ações</th><?php endif ?>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($registos as $r): ?>
+                <tr>
+                  <?php foreach ($colunas as $campo => $def): ?>
+                    <?php
+                    $tipo = is_array($def) ? ($def['tipo'] ?? 'texto') : 'texto';
+                    $valor = $r->{$campo} ?? null;
+                    ?>
+                    <td>
+                      <?php if ($tipo === 'badge' && $valor !== null): ?>
+                        <?= view('components/badge_estado', ['estado' => $valor]) ?>
+                      <?php elseif ($tipo === 'data'): ?>
+                        <span class="texto-suave small"><?= esc(data_exibir($valor, 'curta')) ?></span>
+                      <?php elseif ($tipo === 'bool'): ?>
+                        <?= $valor
+                          ? '<i class="bi bi-check-circle-fill text-success"></i>'
+                          : '<i class="bi bi-dash-circle text-muted"></i>' ?>
+                      <?php else: ?>
+                        <?= esc((string) ($valor ?? '—')) ?>
+                      <?php endif ?>
+                    </td>
+                  <?php endforeach ?>
+                  <?php if ($podeEditar): ?>
+                    <td class="text-end">
+                      <a class="btn btn-sm btn-cns-contorno"
+                        href="<?= site_url($rotaBase . '/editar/' . rawurlencode((string) $r->{$campoId})) ?>">
+                        <i class="bi bi-pencil"></i> Editar
+                      </a>
+                    </td>
                   <?php endif ?>
-                </td>
+                </tr>
               <?php endforeach ?>
-              <?php if ($podeEditar): ?>
-                <td class="text-end">
-                  <a class="btn btn-sm btn-cns-contorno"
-                     href="<?= site_url($rotaBase . '/editar/' . rawurlencode((string) $r->{$campoId})) ?>">
-                    <i class="bi bi-pencil"></i> Editar
-                  </a>
-                </td>
-              <?php endif ?>
-            </tr>
-          <?php endforeach ?>
-        </tbody>
-      </table>
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
     <?php if (isset($pager) && $pager !== null): ?>
       <div class="p-3"><?= $pager->links() ?></div>

@@ -18,12 +18,10 @@ use CodeIgniter\Shield\Authentication\Actions\ActionInterface;
 use CodeIgniter\Shield\Authentication\AuthenticatorInterface;
 use CodeIgniter\Shield\Authentication\Authenticators\AccessTokens;
 use CodeIgniter\Shield\Authentication\Authenticators\HmacSha256;
-use CodeIgniter\Shield\Authentication\Authenticators\JWT;
 use CodeIgniter\Shield\Authentication\Authenticators\Session;
 use CodeIgniter\Shield\Authentication\Passwords\CompositionValidator;
 use CodeIgniter\Shield\Authentication\Passwords\DictionaryValidator;
 use CodeIgniter\Shield\Authentication\Passwords\NothingPersonalValidator;
-use CodeIgniter\Shield\Authentication\Passwords\PwnedValidator;
 use CodeIgniter\Shield\Authentication\Passwords\ValidatorInterface;
 use CodeIgniter\Shield\Models\UserModel;
 
@@ -44,9 +42,23 @@ class Auth extends ShieldAuth
      * --------------------------------------------------------------------
      * View files
      * --------------------------------------------------------------------
+     *
+     * PERSONALIZADO (Concurso Nacional de Soletração):
+     *   - 'login'             → tela própria (ecrã dividido, fichas de letras)
+     *   - 'magic-link-login'  → é a "recuperação" real desta instalação:
+     *                           $allowMagicLinkLogins = true substitui o
+     *                           fluxo tradicional de "definir nova senha"
+     *                           por um link de acesso direto por e-mail.
+     *   - 'magic-link-message'→ ecrã de confirmação depois de pedir o link
+     *   - 'magic-link-email'  → o e-mail com o link
+     *
+     * As restantes chaves (registo, 2FA por e-mail, ativação de conta)
+     * ficam nas views originais do Shield: não são usadas neste projeto
+     * ($allowRegistration = false; 2FA e ativação por e-mail não estão
+     * ligados a nenhum fluxo ativo).
      */
     public array $views = [
-        'login'                       => '\CodeIgniter\Shield\Views\login',
+        'login'                       => 'auth/login',
         'register'                    => '\CodeIgniter\Shield\Views\register',
         'layout'                      => '\CodeIgniter\Shield\Views\layout',
         'action_email_2fa'            => '\CodeIgniter\Shield\Views\email_2fa_show',
@@ -54,10 +66,12 @@ class Auth extends ShieldAuth
         'action_email_2fa_email'      => '\CodeIgniter\Shield\Views\Email\email_2fa_email',
         'action_email_activate_show'  => '\CodeIgniter\Shield\Views\email_activate_show',
         'action_email_activate_email' => '\CodeIgniter\Shield\Views\Email\email_activate_email',
-        'magic-link-login'            => '\CodeIgniter\Shield\Views\magic_link_form',
-        'magic-link-message'          => '\CodeIgniter\Shield\Views\magic_link_message',
-        'magic-link-email'            => '\CodeIgniter\Shield\Views\Email\magic_link_email',
+        'magic-link-login'            => 'auth/magic_link_form',
+        'magic-link-message'          => 'auth/magic_link_message',
+        'magic-link-email'            => 'emails/auth/magic_link_email',
     ];
+
+
 
     /**
      * --------------------------------------------------------------------
@@ -75,8 +89,8 @@ class Auth extends ShieldAuth
      */
     public array $redirects = [
         'register'          => '/',
-        'login'             => '/',
-        'logout'            => 'login',
+        'login'             => 'admin',
+        'logout'            => '/',
         'force_reset'       => '/',
         'permission_denied' => '/',
         'group_denied'      => '/',
@@ -157,7 +171,7 @@ class Auth extends ShieldAuth
      * --------------------------------------------------------------------
      * Determines whether users can register for the site.
      */
-    public bool $allowRegistration = true;
+    public bool $allowRegistration = false;
 
     /**
      * --------------------------------------------------------------------
@@ -180,6 +194,9 @@ class Auth extends ShieldAuth
      * By default, this is used in place of a password reset flow, but
      * could be modified as the only method of login once an account
      * has been set up.
+     *
+     * NESTE PROJETO: é o mecanismo de "esqueci a senha" — ver nota em
+     * $views acima. TEM de continuar `true`.
      */
     public bool $allowMagicLinkLogins = true;
 

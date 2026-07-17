@@ -1,6 +1,5 @@
 <?php
 
-declare(strict_types=1);
 
 namespace App\Controllers\Admin\Inscricoes;
 
@@ -40,9 +39,9 @@ class InscricoesController extends AdminBaseController
             ->paginate(25);
 
         return view('admin/inscricoes/index', [
-            'inscricoes'  => $inscricoes,
-            'pager'       => $model->pager,
-            'contadores'  => $this->contadoresPorEstado(),
+            'inscricoes' => $inscricoes,
+            'pager' => $model->pager,
+            'contadores' => $this->contadoresPorEstado(),
             'estadoAtual' => $estadoAtual,
             // Na view, cada linha gera o link com:
             //   rota_segura('admin/inscricoes/ver', $i->id, 'inscricao')
@@ -70,7 +69,7 @@ class InscricoesController extends AdminBaseController
         $edicao = model('EdicaoModel')->edicaoAtivaParaInscricao();
 
         return view('admin/inscricoes/formulario', [
-            'edicao'     => $edicao,
+            'edicao' => $edicao,
             'provincias' => model('ProvinciaModel')->orderBy('nome')->findAll(),
             'categorias' => $edicao
                 ? model('CategoriaModel')->where('edicao_id', $edicao->id)->findAll()
@@ -87,7 +86,7 @@ class InscricoesController extends AdminBaseController
             return redirect()->back()->with('erro', lang('Concurso.inscricoesFechadas'));
         }
 
-        if (! $this->validate('inscricaoPublica')) {
+        if (!$this->validate('inscricaoPublica')) {
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
@@ -96,20 +95,35 @@ class InscricoesController extends AdminBaseController
         try {
             service('inscricoes')->inscrever(
                 candidato: [
-                    'nome_completo'   => $post['nome_completo'],
-                    'nome_preferido'  => $post['nome_preferido'] ?? null,
-                    'genero'          => $post['genero'],
+                    'nome_completo' => $post['nome_completo'],
+                    'nome_preferido' => $post['nome_preferido'] ?? null,
+                    'genero' => $post['genero'],
                     'data_nascimento' => $post['data_nascimento'],
-                    'escola_id'       => (int) $post['escola_id'],
-                    'classe_atual'    => (int) $post['classe_atual'],
-                    'turma'           => $post['turma'] ?? null,
+                    'cedula_numero' => $post['bi_numero'],
+                    'bi_numero' => $post['bi_numero'] ?? null,
+                    'escola_id' => (int) $post['escola_id'],
+                    'classe_atual' => (int) $post['classe_atual'],
+                    'turma' => $post['turma'] ?? null,
+
+                    'endereco' => $post['endereco'] ?? null,
+                    'telefone_contacto' => $post['telefone_contacto'] ?? null,
+                    'email_contacto' => $post['email_contacto'] ?? null,
+                    'tem_necessidades_especiais' => (int) ($post['tem_necessidades_especiais'] ?? 0),
+                    'descricao_necessidades' => $post['descricao_necessidades'] ?? null,
+                    'idioma_materno' => $post['idioma_materno'] ?? null,
+                    'outros_idiomas' => $post['outros_idiomas'] ?? null,
+                    'notas' => $post['notas'] ?? null,
                 ],
+
                 encarregado: [
                     'nome_completo' => $post['enc_nome_completo'],
-                    'parentesco'    => $post['enc_parentesco'],
-                    'telefone'      => $post['enc_telefone'],
-                    'email'         => $post['enc_email'] ?? null,
-                    'autorizou'     => true,
+                    'bi_numero' => $post['enc_bi_numero'] ?? null,
+                    'parentesco' => $post['enc_parentesco'],
+                    'telefone' => $post['enc_telefone'],
+                    'email' => $post['enc_email'] ?? null,
+                    'autorizou' => true,
+                    'endereco' => $post['endereco'] ?? null,
+                    'profissao' => $post['enc_profissao'] ?? null,
                 ],
                 edicaoId: $edicao->id,
                 categoriaId: (int) $post['categoria_id'],
@@ -161,7 +175,7 @@ class InscricoesController extends AdminBaseController
 
         // Regras nomeadas vivem em Config/Validation.php ($rejeitarInscricao),
         // reutilizáveis por qualquer controller ou comando CLI.
-        if (! $this->validate('rejeitarInscricao')) {
+        if (!$this->validate('rejeitarInscricao')) {
             return redirect()->back()->withInput()
                 ->with('erros', $this->validator->getErrors());
         }

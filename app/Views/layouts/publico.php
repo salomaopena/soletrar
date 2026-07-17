@@ -32,8 +32,8 @@ $menuFooter = service('menus')->arvore('footer');
 
   <!-- Favicons -->
   <link rel="apple-touch-icon" href="<?= base_url('public/assets/img/favicon/apple-touch-icon.png') ?>">
-  <link type="image/png" href="<?= base_url('public/assets/img/favicon/favicon-96x96.png') ?>">
-  <link type="image/svg+xml" href="<?= base_url('public/assets/img/favicon/favicon.svg') ?>">
+  <link rel="shortcut icon"  type="image/png" href="<?= base_url('public/assets/img/favicon/favicon-96x96.png') ?>">
+  <link rel="shortcut icon"  type="image/svg+xml" href="<?= base_url('public/assets/img/favicon/favicon.svg') ?>">
   <link rel="manifest" href="<?= base_url('public/assets/img/favicon/site.webmanifest') ?>">
 
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">

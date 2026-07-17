@@ -23,7 +23,7 @@ $ativo = static fn(string $prefixo): string => str_starts_with($rota, $prefixo) 
     rel="stylesheet">
 
   <link rel="apple-touch-icon" href="<?= base_url('public/assets/img/favicon/apple-touch-icon.png') ?>">
-  <link type="image/png" href="<?= base_url('public/assets/img/favicon/favicon-96x96.png') ?>">
+  <link rel="shortcut icon"  type="image/png" href="<?= base_url('public/assets/img/favicon/favicon-96x96.png') ?>">
   <link type="image/svg+xml" href="<?= base_url('public/assets/img/favicon/favicon.svg') ?>">
   <link rel="manifest" href="<?= base_url('public/assets/img/favicon/site.webmanifest') ?>">
 

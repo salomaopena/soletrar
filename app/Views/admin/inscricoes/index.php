@@ -1,5 +1,5 @@
 <?php /* Listagem administrativa de inscrições (controller da Fase 4).
-   Dados: $inscricoes, $pager, $contadores, $estadoAtual. */ ?>
+Dados: $inscricoes, $pager, $contadores, $estadoAtual. */ ?>
 <?= $this->extend('layouts/admin') ?>
 <?= $this->section('titulo') ?>Inscrições<?= $this->endSection() ?>
 
@@ -16,7 +16,7 @@
   <?php foreach (['pendente', 'validada', 'rejeitada'] as $estado): ?>
     <li class="nav-item">
       <a class="nav-link <?= $estadoAtual === $estado ? 'active' : '' ?>"
-         href="<?= site_url('admin/inscricoes?status=' . $estado) ?>">
+        href="<?= site_url('admin/inscricoes?status=' . $estado) ?>">
         <?= esc(lang('Geral.estado_' . $estado)) ?>
         <span class="badge text-bg-light ms-1"><?= (int) ($contadores[$estado] ?? 0) ?></span>
       </a>
@@ -27,39 +27,48 @@
 <div class="cartao">
   <?php if ($inscricoes === []): ?>
     <?= view('components/estado_vazio', [
-        'palavra'  => 'nada',
-        'mensagem' => 'Não há inscrições neste estado dentro do seu âmbito.',
+      'palavra' => 'nada',
+      'mensagem' => 'Não há inscrições neste estado dentro do seu âmbito.',
     ]) ?>
   <?php else: ?>
-    <div class="table-responsive">
-      <table class="table tabela-cns table-hover align-middle mb-0">
-        <thead>
-          <tr>
-            <th>N.º</th><th>Candidato</th><th>Classe</th><th>Escola</th>
-            <th>Província</th><th>Estado</th><th class="text-end">Recebida</th>
-          </tr>
-        </thead>
-        <tbody>
-          <?php foreach ($inscricoes as $i): ?>
-            <tr>
-              <td class="texto-suave small"><?= esc($i->numero_inscricao ?? '—') ?></td>
-              <td>
-                <a class="fw-semibold text-decoration-none"
-                   href="<?= rota_segura('admin/inscricoes/ver', $i->id, 'inscricao') ?>">
-                  <?= esc($i->nome_completo) ?>
-                </a>
-              </td>
-              <td><?= (int) $i->classe_atual ?>.ª</td>
-              <td class="texto-suave"><?= esc($i->escola) ?></td>
-              <td class="texto-suave"><?= esc($i->provincia) ?></td>
-              <td><?= view('components/badge_estado', ['estado' => $i->status]) ?></td>
-              <td class="text-end texto-suave small"><?= esc(data_exibir($i->data_inscricao, 'curta')) ?></td>
-            </tr>
-          <?php endforeach ?>
-        </tbody>
-      </table>
+    <div class="card">
+      <div class="card-body p-2">
+        <div class="table-responsive">
+          <table class="table  table-hover align-middle mb-0">
+            <thead>
+              <tr>
+                <th>N.º</th>
+                <th>Candidato</th>
+                <th>Classe</th>
+                <th>Escola</th>
+                <th>Província</th>
+                <th>Estado</th>
+                <th class="text-end">Recebida</th>
+              </tr>
+            </thead>
+            <tbody>
+              <?php foreach ($inscricoes as $i): ?>
+                <tr>
+                  <td class="texto-suave small"><?= esc($i->numero_inscricao ?? '—') ?></td>
+                  <td>
+                    <a class="fw-semibold text-decoration-none"
+                      href="<?= rota_segura('admin/inscricoes/ver', $i->id, 'inscricao') ?>">
+                      <?= esc($i->nome_completo) ?>
+                    </a>
+                  </td>
+                  <td><?= (int) $i->classe_atual ?>.ª</td>
+                  <td class="texto-suave"><?= esc($i->escola) ?></td>
+                  <td class="texto-suave"><?= esc($i->provincia) ?></td>
+                  <td><?= view('components/badge_estado', ['estado' => $i->status]) ?></td>
+                  <td class="text-end texto-suave small"><?= esc(data_exibir($i->data_inscricao, 'curta')) ?></td>
+                </tr>
+              <?php endforeach ?>
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3"><?= $pager->links() ?></div>
+      </div>
     </div>
-    <div class="p-3"><?= $pager->links() ?></div>
   <?php endif ?>
 </div>
 <?= $this->endSection() ?>

@@ -34,10 +34,12 @@ class ThrottleFilter implements FilterInterface
                 'rota' => $request->getPath(),
             ]);
 
+            $espera = $throttler->getTokenTime();
+
             return service('response')
                 ->setStatusCode(429, lang('Geral.demasiadosPedidos'))
-                ->setHeader('Retry-After', (string) $throttler->getTokenTime())
-                ->setBody(view('errors/html/error_429'));
+                ->setHeader('Retry-After', (string) $espera)
+                ->setBody(view('errors/html/error_429', ['tentarDaquiA' => $espera]));
         }
     }
 

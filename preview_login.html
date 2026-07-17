@@ -1,0 +1,429 @@
+<!doctype html>
+<html lang="pt-AO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pré-visualização · Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@700;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+/* =====================================================================
+   CONCURSO NACIONAL DE SOLETRAÇÃO — ANGOLA
+   Tema visual (sobre Bootstrap 5.3)
+   ---------------------------------------------------------------------
+   Direção: minimalista e institucional (base branca, tipografia forte,
+   espaçamento generoso), com as cores do logotipo usadas cirurgicamente
+   como acentos. Elemento-assinatura: as "fichas de letras" (.ficha-letra),
+   que trazem a soletração para a linguagem visual do site.
+   ===================================================================== */
+
+/* ------------------------- 1. DESIGN TOKENS ------------------------- */
+:root {
+  /* Cores do logotipo (na ordem das letras: S O L E T R A Ç Ã O) */
+  --cns-verde-agua: #2AA8A3;   /* S, O final — cor institucional primária */
+  --cns-amarelo:    #F5B921;   /* O, Ã */
+  --cns-verde:      #8CBF2F;   /* L */
+  --cns-roxo:       #8A3FB5;   /* E */
+  --cns-azul:       #2D7FD3;   /* T */
+  --cns-rosa:       #EF5B92;   /* R */
+  --cns-laranja:    #F07830;   /* A */
+  --cns-marinho:    #232B66;   /* Ç — cor escura de texto e superfícies */
+
+  /* Neutros */
+  --cns-tinta:      #1D2433;
+  --cns-tinta-2:    #5A6478;
+  --cns-superficie: #F7F8FA;
+  --cns-borda:      #E6E9EF;
+  --cns-branco:     #FFFFFF;
+
+  /* Estados (derivados da paleta, não do Bootstrap padrão) */
+  --cns-sucesso: var(--cns-verde);
+  --cns-perigo:  #D6455D;          /* rosa escurecido p/ contraste AA */
+  --cns-aviso:   var(--cns-amarelo);
+  --cns-info:    var(--cns-azul);
+
+  /* Tipografia */
+  --cns-fonte-display: "Nunito", system-ui, sans-serif;
+  --cns-fonte-corpo:   "Inter", system-ui, -apple-system, sans-serif;
+
+  /* Forma */
+  --cns-raio:    14px;
+  --cns-raio-sm: 8px;
+  --cns-sombra:  0 1px 2px rgba(29,36,51,.05), 0 8px 24px rgba(29,36,51,.06);
+
+  /* Ponte para o Bootstrap 5.3 */
+  --bs-primary: var(--cns-verde-agua);
+  --bs-primary-rgb: 42,168,163;
+  --bs-body-font-family: var(--cns-fonte-corpo);
+  --bs-body-color: var(--cns-tinta);
+  --bs-border-color: var(--cns-borda);
+  --bs-border-radius: var(--cns-raio-sm);
+  --bs-link-color: #1F8C87;                 /* verde-água AA sobre branco */
+  --bs-link-hover-color: var(--cns-marinho);
+}
+
+/* --------------------------- 2. BASE --------------------------- */
+body { background: var(--cns-branco); color: var(--cns-tinta); }
+
+h1, h2, h3, .display-cns {
+  font-family: var(--cns-fonte-display);
+  font-weight: 800;
+  letter-spacing: -0.015em;
+  color: var(--cns-marinho);
+}
+
+.texto-suave { color: var(--cns-tinta-2); }
+
+/* Rótulo pequeno acima de títulos (eyebrow) */
+.rotulo-secao {
+  font: 700 .78rem/1 var(--cns-fonte-corpo);
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--cns-verde-agua);
+}
+
+:focus-visible {
+  outline: 3px solid var(--cns-azul);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ------------------- 3. ASSINATURA: FICHAS DE LETRAS ------------------- */
+/* A palavra soletrada como fichas coloridas (sequência cromática do logo).
+   Uso: resultados ao vivo, destaques do hero, página 404, certificados. */
+.fichas { display: inline-flex; gap: .3rem; flex-wrap: wrap; }
+
+.ficha-letra {
+  display: inline-grid; place-items: center;
+  width: 2.2rem; height: 2.6rem;
+  border-radius: 10px;
+  font: 800 1.15rem/1 var(--cns-fonte-display);
+  color: #fff;
+  text-transform: uppercase;
+  box-shadow: inset 0 -3px 0 rgba(0,0,0,.14);
+}
+
+/* Sequência cromática do logotipo, em ciclo de 8 */
+.fichas > :nth-child(8n+1) { background: var(--cns-verde-agua); }
+.fichas > :nth-child(8n+2) { background: var(--cns-amarelo); }
+.fichas > :nth-child(8n+3) { background: var(--cns-verde); }
+.fichas > :nth-child(8n+4) { background: var(--cns-roxo); }
+.fichas > :nth-child(8n+5) { background: var(--cns-azul); }
+.fichas > :nth-child(8n+6) { background: var(--cns-rosa); }
+.fichas > :nth-child(8n+7) { background: var(--cns-laranja); }
+.fichas > :nth-child(8n+8) { background: var(--cns-marinho); }
+
+.ficha-letra--errada { background: var(--cns-borda) !important; color: var(--cns-tinta-2); text-decoration: line-through; }
+
+/* --------------------- 4. NAVEGAÇÃO E LAYOUT PÚBLICO --------------------- */
+.navbar-portal {
+  background: rgba(255,255,255,.85);
+  backdrop-filter: saturate(160%) blur(12px);
+  border-bottom: 1px solid var(--cns-borda);
+}
+.navbar-portal .nav-link { font-weight: 600; color: var(--cns-tinta); }
+.navbar-portal .nav-link.active,
+.navbar-portal .nav-link:hover { color: var(--cns-verde-agua); }
+
+.hero-portal { padding: clamp(3rem, 8vw, 6rem) 0; }
+.hero-portal h1 { font-size: clamp(2.1rem, 5vw, 3.4rem); max-width: 18ch; }
+
+.rodape-portal {
+  background: var(--cns-marinho); color: #C7CBE3;
+  padding: 3rem 0 2rem; margin-top: 5rem;
+}
+.rodape-portal a { color: #fff; text-decoration: none; }
+.rodape-portal a:hover { color: var(--cns-amarelo); }
+
+/* ----------------------- 5. COMPONENTES COMUNS ----------------------- */
+.cartao {
+  background: var(--cns-branco);
+  border: 1px solid var(--cns-borda);
+  border-radius: var(--cns-raio);
+  box-shadow: var(--cns-sombra);
+}
+.cartao--interativo { transition: transform .15s ease, box-shadow .15s ease; }
+.cartao--interativo:hover { transform: translateY(-2px); box-shadow: 0 12px 32px rgba(29,36,51,.10); }
+
+/* Badges de estado do domínio (inscrições, notícias, eventos) */
+.badge-estado {
+  display: inline-flex; align-items: center; gap: .35rem;
+  padding: .3rem .65rem; border-radius: 999px;
+  font: 700 .74rem/1 var(--cns-fonte-corpo);
+}
+.badge-estado::before { content: ""; width: .5rem; height: .5rem; border-radius: 50%; background: currentColor; }
+.badge-estado--pendente   { color: #8a6d00; background: #FDF3D3; }
+.badge-estado--validada,
+.badge-estado--publicada,
+.badge-estado--aprovado   { color: #3E6212; background: #ECF5D9; }
+.badge-estado--rejeitada,
+.badge-estado--falhada    { color: #93283C; background: #FBE3E8; }
+.badge-estado--rascunho   { color: var(--cns-tinta-2); background: var(--cns-superficie); }
+.badge-estado--revisao    { color: #5B2A78; background: #F1E4F8; }
+.badge-estado--agendada,
+.badge-estado--em-curso   { color: #1B5EA6; background: #E1EEFB; }
+
+/* Botões: primário institucional; nunca gradientes */
+.btn-cns {
+  background: var(--cns-verde-agua); border: 0; color: #fff;
+  font-weight: 700; border-radius: 999px; padding: .6rem 1.4rem;
+}
+.btn-cns:hover { background: #23918D; color: #fff; }
+.btn-cns-contorno {
+  border: 2px solid var(--cns-marinho); color: var(--cns-marinho);
+  font-weight: 700; border-radius: 999px; padding: .55rem 1.35rem; background: transparent;
+}
+.btn-cns-contorno:hover { background: var(--cns-marinho); color: #fff; }
+
+/* Formulários */
+.form-control, .form-select { border-radius: var(--cns-raio-sm); border-color: var(--cns-borda); padding: .6rem .8rem; }
+.form-control:focus, .form-select:focus {
+  border-color: var(--cns-verde-agua);
+  box-shadow: 0 0 0 .2rem rgba(42,168,163,.18);
+}
+.form-label { font-weight: 600; color: var(--cns-marinho); }
+.campo-erro { color: var(--cns-perigo); font-size: .82rem; margin-top: .25rem; }
+
+/* Tabelas de listagem */
+.tabela-cns { --bs-table-hover-bg: #F2FAF9; }
+.tabela-cns thead th {
+  font: 700 .74rem/1.2 var(--cns-fonte-corpo);
+  letter-spacing: .08em; text-transform: uppercase;
+  color: var(--cns-tinta-2); border-bottom: 2px solid var(--cns-borda);
+}
+
+/* Estado vazio */
+.estado-vazio { text-align: center; padding: 4rem 1rem; color: var(--cns-tinta-2); }
+.estado-vazio .fichas { opacity: .9; margin-bottom: 1rem; }
+
+/* ----------------------- 6. ÁREA ADMINISTRATIVA (estilo AdminLTE) ----------------------- */
+:root {
+  --admin-sidebar-w: 250px;
+  --admin-sidebar-w-min: 68px;   /* modo colapsado */
+  --admin-navbar-h: 58px;
+}
+
+.admin-body { background: var(--cns-superficie); }
+
+/* --- Navbar superior fixa --- */
+.navbar-admin {
+  height: var(--admin-navbar-h);
+  background: var(--cns-branco);
+  border-bottom: 1px solid var(--cns-borda);
+  z-index: 1040;
+}
+.navbar-admin .navbar-brand { font: 800 1.05rem var(--cns-fonte-display); color: var(--cns-marinho); }
+.btn-icone {
+  border: 0; background: transparent; color: var(--cns-tinta-2);
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 2.4rem; height: 2.4rem; border-radius: 10px;
+}
+.btn-icone:hover { background: var(--cns-superficie); color: var(--cns-marinho); }
+.ficha-mini { width: 1.6rem; height: 1.9rem; font-size: .9rem; border-radius: 7px; }
+.avatar-inicial {
+  display: inline-grid; place-items: center; width: 2rem; height: 2rem;
+  border-radius: 50%; background: var(--cns-verde-agua); color: #fff;
+  font: 700 .85rem var(--cns-fonte-display);
+}
+
+/* --- Sidebar --- */
+.sidebar-admin {
+  background-color: var(--cns-marinho) !important;   /* mesma cor em mobile e desktop */
+  color: #C7CBE3;
+  width: var(--admin-sidebar-w);
+}
+.sidebar-admin .offcanvas-header { border-bottom: 1px solid rgba(255,255,255,.10); }
+/* Em desktop: fixa abaixo da navbar.
+   IMPORTANTE: o Bootstrap força `background-color: transparent !important`
+   nas classes .offcanvas-* a partir do breakpoint — era por isso que a
+   sidebar aparecia CLARA no PC e escura no telemóvel. Repomos a cor. */
+@media (min-width: 992px) {
+  .sidebar-admin {
+    position: fixed; top: var(--admin-navbar-h); left: 0;
+    height: calc(100vh - var(--admin-navbar-h));
+    overflow-y: auto; transition: width .18s ease;
+    background-color: var(--cns-marinho) !important;
+    border-right: 0 !important;
+  }
+  .conteudo-admin {
+    margin-left: var(--admin-sidebar-w);
+    padding: calc(var(--admin-navbar-h) + 1.5rem) clamp(1rem, 3vw, 2.25rem) 2.5rem;
+    transition: margin-left .18s ease;
+  }
+  /* Modo colapsado: só ícones */
+  .sidebar-colapsada .sidebar-admin { width: var(--admin-sidebar-w-min); }
+  .sidebar-colapsada .conteudo-admin { margin-left: var(--admin-sidebar-w-min); }
+  .sidebar-colapsada .sidebar-admin .rotulo { display: none; }
+  .sidebar-colapsada .sidebar-admin .nav-link { justify-content: center; padding-inline: 0; }
+  .sidebar-colapsada .sidebar-admin .grupo-menu { height: 1px; margin: .75rem .5rem; padding: 0; background: rgba(255,255,255,.12); }
+  .sidebar-colapsada .navbar-admin .marca-texto { display: none; }
+}
+/* Em mobile é um offcanvas do Bootstrap (classe offcanvas-lg no markup) */
+@media (max-width: 991.98px) {
+  .conteudo-admin { padding: calc(var(--admin-navbar-h) + 1rem) 1rem 2rem; }
+}
+
+.sidebar-corpo { padding: .9rem .7rem; }
+.sidebar-admin .nav-link {
+  display: flex; align-items: center; gap: .7rem;
+  color: #C7CBE3; font-weight: 600; font-size: .92rem;
+  border-radius: 10px; padding: .58rem .75rem; margin-bottom: .12rem;
+  white-space: nowrap;
+}
+.sidebar-admin .nav-link i { font-size: 1.05rem; flex: 0 0 auto; }
+.sidebar-admin .nav-link:hover { color: #fff; background: rgba(255,255,255,.08); }
+.sidebar-admin .nav-link.active { color: #fff; background: var(--cns-verde-agua); }
+.sidebar-admin .grupo-menu {
+  font: 700 .68rem/1 var(--cns-fonte-corpo); letter-spacing: .12em;
+  text-transform: uppercase; color: #8890BE;
+  margin: 1.1rem .75rem .4rem;
+}
+
+/* Cartões de estatística do dashboard */
+.stat-card { padding: 1.25rem 1.4rem; }
+.stat-card .valor { font: 800 2rem/1 var(--cns-fonte-display); color: var(--cns-marinho); }
+.stat-card .rotulo { font-size: .82rem; color: var(--cns-tinta-2); font-weight: 600; }
+.stat-card .faixa { width: 2.4rem; height: .35rem; border-radius: 999px; margin-bottom: .8rem; }
+
+/* --------------- 7. RESULTADOS (grelha estilo round-results) --------------- */
+.grelha-rounds { overflow-x: auto; }
+.grelha-rounds table { border-collapse: separate; border-spacing: 0; min-width: 640px; width: 100%; }
+.grelha-rounds th, .grelha-rounds td { padding: .55rem .6rem; text-align: center; }
+
+.grelha-rounds .col-candidato {
+  position: sticky; left: 0; background: var(--cns-branco);
+  text-align: left; min-width: 220px; font-weight: 600;
+  border-right: 1px solid var(--cns-borda); z-index: 1;
+}
+.grelha-rounds tbody tr { border-top: 1px solid var(--cns-borda); }
+.grelha-rounds tbody tr:hover td { background: #F6FBFB; }
+.grelha-rounds tbody tr:hover .col-candidato { background: #F6FBFB; }
+
+/* Célula de round: acertou / eliminado / não soletrou / apelação aceite */
+.celula-round {
+  display: inline-grid; place-items: center;
+  width: 1.9rem; height: 1.9rem; border-radius: 50%;
+  font: 800 .95rem/1 var(--cns-fonte-display);
+}
+.celula-round--acerto   { background: #E4F3F2; color: #1F7D78; }
+.celula-round--erro     { background: #FBE3E8; color: #B4324B; }
+.celula-round--ausente  { background: var(--cns-superficie); color: #A9B0C0; }
+.celula-round--apelacao { background: #FDF3D3; color: #8A6D00; box-shadow: 0 0 0 2px var(--cns-amarelo); }
+
+/* Pódio dos 3 primeiros na classificação */
+.linha-podio td { background: #FBF7EA; }
+.medalha {
+  display: inline-grid; place-items: center;
+  width: 1.8rem; height: 1.8rem; border-radius: 50%;
+  font: 800 .85rem/1 var(--cns-fonte-display); color: #fff;
+}
+.medalha--1 { background: var(--cns-amarelo); }
+.medalha--2 { background: #9AA3B8; }
+.medalha--3 { background: var(--cns-laranja); }
+
+/* ----------------------- 8. ARTIGO DE NOTÍCIA ----------------------- */
+.artigo { max-width: 720px; margin-inline: auto; }
+.artigo h1 { font-size: clamp(1.8rem, 4vw, 2.6rem); line-height: 1.15; }
+.artigo .meta { color: var(--cns-tinta-2); font-size: .9rem; }
+.artigo .conteudo { font-size: 1.08rem; line-height: 1.75; }
+.artigo .conteudo img { border-radius: var(--cns-raio); max-width: 100%; height: auto; }
+.artigo .conteudo blockquote {
+  border-left: 4px solid var(--cns-verde-agua);
+  padding: .25rem 0 .25rem 1.25rem; color: var(--cns-tinta-2); font-style: italic;
+}
+.imagem-destacada { border-radius: var(--cns-raio); width: 100%; height: auto; }
+.etiqueta-categoria {
+  font: 700 .74rem/1 var(--cns-fonte-corpo); letter-spacing: .06em;
+  text-transform: uppercase; color: var(--cns-roxo); text-decoration: none;
+}
+
+/* --------------- 9. CARTÕES DA PÁGINA DE CONFIGURAÇÕES --------------- */
+.icone-config {
+  display: inline-grid; place-items: center;
+  width: 2.5rem; height: 2.5rem; flex: 0 0 auto;
+  border-radius: 12px;
+  background: #E9F6F5; color: var(--cns-verde-agua);
+  font-size: 1.15rem;
+}
+.cartao--interativo:hover .icone-config { background: var(--cns-verde-agua); color: #fff; }
+html, body { height: 100%; }
+body.tela-auth { margin: 0; }
+.grelha-auth { min-height: 100vh; display: flex; }
+@media (max-width: 991.98px) { .grelha-auth { flex-direction: column; } }
+.painel-marca {
+  flex: 0 0 46%; background: var(--cns-marinho); color: #fff;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  position: relative; overflow: hidden; padding: 3rem 2rem;
+  background-image: repeating-linear-gradient(to bottom, transparent 0, transparent 46px, rgba(255,255,255,.045) 46px, rgba(255,255,255,.045) 47px);
+}
+@media (max-width: 991.98px) { .painel-marca { flex: 0 0 auto; padding: 2.25rem 1.5rem 1.75rem; } }
+.fichas-login { display: inline-flex; gap: .4rem; flex-wrap: wrap; justify-content: center; }
+.fichas-login .ficha-letra {
+  width: 2.6rem; height: 3.05rem; font-size: 1.3rem;
+  opacity: 0; transform: translateY(14px) scale(.85);
+  animation: surgir-ficha .55s cubic-bezier(.2,.8,.2,1) forwards;
+  box-shadow: 0 6px 16px rgba(0,0,0,.18), inset 0 -3px 0 rgba(0,0,0,.14);
+}
+@keyframes surgir-ficha { to { opacity: 1; transform: translateY(0) scale(1); } }
+.tagline-auth { margin: 1.5rem 0 0; max-width: 27ch; text-align: center; color: #C7CBE3; font-size: 1.05rem; line-height: 1.5; }
+.edicao-auth { margin-top: .6rem; font: 700 .74rem/1 var(--cns-fonte-corpo); letter-spacing: .1em; text-transform: uppercase; color: #8890BE; }
+.painel-form { flex: 1; display: flex; align-items: center; justify-content: center; background: var(--cns-superficie); padding: 2.5rem 1.5rem; }
+.cartao-auth { width: 100%; max-width: 380px; background: var(--cns-branco); border: 1px solid var(--cns-borda); border-radius: var(--cns-raio); box-shadow: 0 20px 50px rgba(29,36,51,.08); padding: 2.5rem 2.25rem; }
+.rodape-auth { text-align: center; margin-top: 1.25rem; }
+.rodape-auth a { color: var(--cns-tinta-2); text-decoration: none; font-size: .85rem; }
+</style>
+</head>
+<body class="tela-auth">
+  <div class="grelha-auth">
+    <aside class="painel-marca" aria-hidden="true">
+      <span class="fichas-login" role="img" aria-label="Soletrar">
+        <span class="ficha-letra" style="animation-delay:0.15s">S</span>
+<span class="ficha-letra" style="animation-delay:0.26s">O</span>
+<span class="ficha-letra" style="animation-delay:0.37s">L</span>
+<span class="ficha-letra" style="animation-delay:0.48s">E</span>
+<span class="ficha-letra" style="animation-delay:0.59s">T</span>
+<span class="ficha-letra" style="animation-delay:0.70s">R</span>
+<span class="ficha-letra" style="animation-delay:0.81s">A</span>
+<span class="ficha-letra" style="animation-delay:0.92s">R</span>
+
+      </span>
+      <p class="tagline-auth">A língua portuguesa em palco, letra a letra.</p>
+      <p class="edicao-auth">Edição 2026</p>
+    </aside>
+
+    <main class="painel-form">
+      <div class="cartao-auth">
+        <h1 class="h5 text-center mb-1" style="color:var(--cns-marinho)">Área reservada</h1>
+        <p class="texto-suave text-center small mb-4">Acesso para coordenadores, júri e equipa editorial.</p>
+
+        <form method="post">
+          <div class="mb-3">
+            <label class="form-label" for="email">E-mail</label>
+            <input class="form-control" type="email" id="email" name="email" placeholder="nome@exemplo.ao">
+          </div>
+          <div class="mb-3">
+            <label class="form-label" for="password">Senha</label>
+            <input class="form-control" type="password" id="password" name="password">
+          </div>
+          <div class="form-check mb-4">
+            <input class="form-check-input" type="checkbox" id="remember">
+            <label class="form-check-label small" for="remember">Manter sessão iniciada neste dispositivo</label>
+          </div>
+          <button class="btn btn-cns w-100" type="submit"><i class="bi bi-box-arrow-in-right me-1"></i> Entrar</button>
+        </form>
+
+        <div class="rodape-auth">
+          <a href="#">Esqueceu a senha?</a>
+          <span class="texto-suave mx-1">·</span>
+          <a href="#">Voltar ao portal</a>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>
