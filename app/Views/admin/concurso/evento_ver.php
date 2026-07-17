@@ -166,7 +166,7 @@ $totalPool = array_sum($poolRestante);
         <ul class="list-group list-group-flush mb-3">
           <?php foreach ($juri as $j): ?>
             <li class="list-group-item px-0 d-flex justify-content-between align-items-center">
-              <span><?= esc($j->username) ?>
+              <span><?= esc($j->nome_completo) ?>
                 <span class="badge text-bg-light ms-1"><?= esc($papeis[$j->papel] ?? $j->papel) ?></span>
               </span>
               <form method="post"
@@ -186,11 +186,11 @@ $totalPool = array_sum($poolRestante);
         <?= csrf_field() ?>
         <div class="row g-2">
           <div class="col-6">
-            <label class="form-label small" for="user_id">Utilizador</label>
+            <label class="form-label small" for="user_id">Membro</label>
             <select class="form-select form-select-sm" id="user_id" name="user_id" required>
               <option value="">—</option>
               <?php foreach ($candidatosJuri as $u): ?>
-                <option value="<?= (int) $u->id ?>"><?= esc($u->username) ?></option>
+                <option value="<?= (int) $u->id ?>"><?= esc($u->nome_completo) ?></option>
               <?php endforeach ?>
             </select>
           </div>

@@ -28,13 +28,13 @@ class EventosController extends AdminBaseController
             ->join('fases_concurso f', 'f.id = eventos_competicao.fase_id')
             ->join('categorias_competicao c', 'c.id = eventos_competicao.categoria_id', 'left');
 
-        if (! $this->escopo->eNacional() && $this->escopo->provincias !== []) {
+        if (!$this->escopo->eNacional() && $this->escopo->provincias !== []) {
             $model->whereIn('eventos_competicao.provincia_id', $this->escopo->provincias);
         }
 
         return view('admin/concurso/eventos_index', [
-            'eventos'    => $model->orderBy('eventos_competicao.data_evento', 'DESC')->paginate(25),
-            'pager'      => $model->pager,
+            'eventos' => $model->orderBy('eventos_competicao.data_evento', 'DESC')->paginate(25),
+            'pager' => $model->pager,
             // Eventos que partilham fase+categoria+escola/província com
             // outro evento ativo — sinal de duplicação por engano (a
             // causa real, descoberta em produção, de dois "concursos"
@@ -64,26 +64,26 @@ class EventosController extends AdminBaseController
     public function nova()
     {
         return view('admin/crud/formulario', [
-            'titulo'   => 'Novo evento',
+            'titulo' => 'Novo evento',
             'rotaBase' => self::ROTA,
-            'registo'  => null,
-            'campos'   => $this->campos(),
+            'registo' => null,
+            'campos' => $this->campos(),
         ]);
     }
 
     public function editar(int $id)
     {
         return view('admin/crud/formulario', [
-            'titulo'   => 'Editar evento',
+            'titulo' => 'Editar evento',
             'rotaBase' => self::ROTA,
-            'registo'  => model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound(),
-            'campos'   => $this->campos(),
+            'registo' => model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound(),
+            'campos' => $this->campos(),
         ]);
     }
 
     public function guardar()
     {
-        if (! $this->validate($this->regras())) {
+        if (!$this->validate($this->regras())) {
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
@@ -111,7 +111,7 @@ class EventosController extends AdminBaseController
 
     public function atualizar(int $id)
     {
-        if (! $this->validate($this->regras())) {
+        if (!$this->validate($this->regras())) {
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
@@ -147,7 +147,7 @@ class EventosController extends AdminBaseController
     // --------------------------- Sala de controlo ---------------------------
 
     /** Painel do evento: júri, participantes, pool e ações. */
-    public function ver(int $id)
+    public function ver(int $id) 
     {
         $evento = model('EventoModel')
             ->select('eventos_competicao.*, f.nome AS fase, f.tipo_fase, c.nome AS categoria')
@@ -156,17 +156,19 @@ class EventosController extends AdminBaseController
             ->find($id) ?? throw PageNotFoundException::forPageNotFound();
 
         return view('admin/concurso/evento_ver', [
-            'evento'        => $evento,
-            'jaHomologado'  => service('classificacao')->foiHomologado($id),
-            'juri'          => $this->juriDo($id),
+            'evento' => $evento,
+            'jaHomologado' => service('classificacao')->foiHomologado($id),
+            'juri' => $this->juriDo($id),
             'participantes' => $this->participantesDo($id),
-            'poolRestante'  => service('palavras')->restantesNoPool($id),
-            'poolTotal'     => db_connect()->table('pool_palavras_evento')
-                                  ->where('evento_id', $id)->countAllResults(),
+            'poolRestante' => service('palavras')->restantesNoPool($id),
+            'poolTotal' => db_connect()->table('pool_palavras_evento')
+                ->where('evento_id', $id)->countAllResults(),
             // Utilizadores elegíveis para júri (jurados e pronunciadores)
             'candidatosJuri' => db_connect()->table('users u')
-                ->select('u.id, u.username')
+                ->select('u.id, p.nome_completo')
                 ->join('auth_groups_users g', 'g.user_id = u.id')
+                ->join('perfis_utilizador p', 'p.user_id = u.id')
+                ->where('u.active', 1)
                 ->whereIn('g.group', ['jurado', 'pronunciador', 'coord_nacional', 'coord_provincial'])
                 ->groupBy('u.id, u.username')->orderBy('u.username')
                 ->get()->getResult(),
@@ -238,10 +240,10 @@ class EventosController extends AdminBaseController
     public function montarPool(int $id)
     {
         $quantidades = array_filter([
-            'muito_facil'   => (int) $this->request->getPost('muito_facil'),
-            'facil'         => (int) $this->request->getPost('facil'),
-            'media'         => (int) $this->request->getPost('media'),
-            'dificil'       => (int) $this->request->getPost('dificil'),
+            'muito_facil' => (int) $this->request->getPost('muito_facil'),
+            'facil' => (int) $this->request->getPost('facil'),
+            'media' => (int) $this->request->getPost('media'),
+            'dificil' => (int) $this->request->getPost('dificil'),
             'muito_dificil' => (int) $this->request->getPost('muito_dificil'),
         ]);
 
@@ -300,11 +302,11 @@ class EventosController extends AdminBaseController
         }
 
         return view('admin/concurso/evento_pool', [
-            'evento'           => $evento,
-            'termo'            => $termo,
+            'evento' => $evento,
+            'termo' => $termo,
             'estadoPorPalavra' => $estadoPorPalavra,
-            'elegiveis'        => service('palavras')->elegiveisParaEvento($id, $termo),
-            'palavras'=> db_connect()->table('pool_palavras_evento ppe')
+            'elegiveis' => service('palavras')->elegiveisParaEvento($id, $termo),
+            'palavras' => db_connect()->table('pool_palavras_evento ppe')
                 ->select('ppe.id, ppe.usada, p.id AS palavra_id, p.palavra,
                           p.dificuldade, p.silabacao')
                 ->join('palavras p', 'p.id = ppe.palavra_id')
@@ -404,7 +406,7 @@ class EventosController extends AdminBaseController
         $evento = model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound();
 
         return view('admin/concurso/evento_tentativas', [
-            'evento'     => $evento,
+            'evento' => $evento,
             'tentativas' => db_connect()->table('tentativas_soletracao t')
                 ->select('t.id, t.correta, t.resposta_dada, t.tempo_resposta_seg,
                           t.pontos_atribuidos, t.apelacao_solicitada, t.apelacao_resultado,
@@ -436,7 +438,7 @@ class EventosController extends AdminBaseController
         $evento = model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound();
 
         return view('admin/concurso/confirmar_recalculo', [
-            'evento'       => $evento,
+            'evento' => $evento,
             'jaHomologado' => service('classificacao')->foiHomologado($id),
         ]);
     }
@@ -463,16 +465,18 @@ class EventosController extends AdminBaseController
         // depender da página pública, que pode estar a mostrar uma
         // versão em cache de antes do recálculo.
         $top3 = array_map(
-            static fn ($p) => $p['posicao_final'] . '.º ' . $p['nome_completo'],
+            static fn($p) => $p['posicao_final'] . '.º ' . $p['nome_completo'],
             service('relatorios')->classificacaoEvento($id)
         );
         $resumo = array_slice($top3, 0, 3);
 
-        return redirect()->back()->with('sucesso',
+        return redirect()->back()->with(
+            'sucesso',
             'Classificação recalculada agora mesmo — ' . implode(' · ', $resumo) . '. '
             . 'Se a página pública ainda mostrar a ordem antiga, é cache: '
             . 'faça Ctrl+F5 no navegador e confirme que "pagecache" não está em '
-            . 'Config/Filters.php ($required).');
+            . 'Config/Filters.php ($required).'
+        );
     }
 
     /** Pauta do evento pronta a imprimir (lista de concorrentes). */
@@ -481,9 +485,9 @@ class EventosController extends AdminBaseController
         $evento = model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound();
 
         return view('impressao/lista_participantes', [
-            'evento'        => $evento,
+            'evento' => $evento,
             'participantes' => $this->participantesDo($id),
-            'titulo'        => 'Pauta de concorrentes',
+            'titulo' => 'Pauta de concorrentes',
         ]);
     }
 
@@ -517,51 +521,131 @@ class EventosController extends AdminBaseController
     {
         $ops = static function (array $rs, string $campo = 'nome'): array {
             $o = [];
-            foreach ($rs as $r) { $o[$r->id] = $r->{$campo}; }
+            foreach ($rs as $r) {
+                $o[$r->id] = $r->{$campo};
+            }
             return $o;
         };
 
         return [
-            ['nome' => 'nome', 'rotulo' => 'Nome do evento', 'obrigatorio' => true, 'largura' => 12],
-            ['nome' => 'fase_id', 'rotulo' => 'Fase', 'tipo' => 'select', 'obrigatorio' => true, 'largura' => 6,
-             'opcoes' => $ops(model('FaseModel')->orderBy('ordem')->findAll())],
-            ['nome' => 'categoria_id', 'rotulo' => 'Categoria', 'tipo' => 'select', 'obrigatorio' => true, 'largura' => 6,
-             'opcoes' => $ops(model('CategoriaModel')->orderBy('ordem')->findAll())],
-            ['nome' => 'data_evento', 'rotulo' => 'Data do evento', 'tipo' => 'date', 'obrigatorio' => true, 'largura' => 4],
-            ['nome' => 'status', 'rotulo' => 'Estado', 'tipo' => 'select', 'largura' => 4,
-             'opcoes' => ['agendado' => 'Agendado', 'em_curso' => 'Em curso', 'pausado' => 'Pausado',
-                          'concluido' => 'Concluído', 'adiado' => 'Adiado', 'cancelado' => 'Cancelado']],
-            ['nome' => 'local_id', 'rotulo' => 'Local', 'tipo' => 'select', 'largura' => 4,
-             'opcoes' => $ops(model('LocalEventoModel')->orderBy('nome')->findAll())],
-            ['nome' => 'provincia_id', 'rotulo' => 'Província', 'tipo' => 'select', 'largura' => 4,
-             'opcoes' => $ops(model('ProvinciaModel')->orderBy('nome')->findAll())],
-            ['nome' => 'municipio_id', 'rotulo' => 'Município', 'tipo' => 'select', 'largura' => 4,
-             'opcoes' => $ops(model('MunicipioModel')->orderBy('nome')->findAll())],
-            ['nome' => 'escola_id', 'rotulo' => 'Escola (fase escolar)', 'tipo' => 'select', 'largura' => 4,
-             'opcoes' => $ops(model('EscolaModel')->where('ativo', 1)->orderBy('nome')->findAll())],
-            ['nome' => 'data_fim_prevista', 'rotulo' => 'Fim previsto', 'tipo' => 'date', 'largura' => 4],
-            ['nome' => 'transmissao_url', 'rotulo' => 'Transmissão (URL)', 'tipo' => 'text', 'largura' => 8,
-             'ajuda' => 'Link do direto (YouTube, Facebook…).'],
-            ['nome' => 'observacoes', 'rotulo' => 'Observações', 'tipo' => 'textarea', 'largura' => 12],
+            [
+                'nome' => 'nome',
+                'rotulo' => 'Nome do evento',
+                'obrigatorio' => true,
+                'largura' => 12
+            ],
+            [
+                'nome' => 'fase_id',
+                'rotulo' => 'Fase',
+                'tipo' => 'select',
+                'obrigatorio' => true,
+                'largura' => 6,
+                'opcoes' => $ops(model('FaseModel')->orderBy('ordem')->findAll())
+            ],
+            [
+                'nome' => 'categoria_id',
+                'rotulo' => 'Categoria',
+                'tipo' => 'select',
+                'obrigatorio' => true,
+                'largura' => 6,
+                'opcoes' => $ops(model('CategoriaModel')->orderBy('ordem')->findAll())
+            ],
+            [
+                'nome' => 'data_evento',
+                'rotulo' => 'Data do evento',
+                'tipo' => 'date',
+                'obrigatorio' => true,
+                'largura' => 4
+            ],
+            [
+                'nome' => 'status',
+                'rotulo' => 'Estado',
+                'tipo' => 'select',
+                'largura' => 4,
+                'opcoes' => [
+                    'agendado' => 'Agendado',
+                    'em_curso' => 'Em curso',
+                    'pausado' => 'Pausado',
+                    'concluido' => 'Concluído',
+                    'adiado' => 'Adiado',
+                    'cancelado' => 'Cancelado'
+                ]
+            ],
+            [
+                'nome' => 'local_id',
+                'rotulo' => 'Local',
+                'tipo' => 'select',
+                'largura' => 4,
+                'opcoes' => $ops(model('LocalEventoModel')->orderBy('nome')->findAll())
+            ],
+            [
+                'nome' => 'provincia_id',
+                'rotulo' => 'Província',
+                'tipo' => 'select',
+                'largura' => 4,
+                'opcoes' => $ops(model('ProvinciaModel')->orderBy('nome')->findAll())
+            ],
+            [
+                'nome' => 'municipio_id',
+                'rotulo' => 'Município',
+                'tipo' => 'select',
+                'largura' => 4,
+                'opcoes' => $ops(model('MunicipioModel')->orderBy('nome')->findAll())
+            ],
+            [
+                'nome' => 'escola_id',
+                'rotulo' => 'Escola (fase escolar)',
+                'tipo' => 'select',
+                'largura' => 4,
+                'opcoes' => $ops(model('EscolaModel')->where('ativo', 1)->orderBy('nome')->findAll())
+            ],
+            [
+                'nome' => 'data_fim_prevista',
+                'rotulo' => 'Fim previsto',
+                'tipo' => 'date',
+                'largura' => 4
+            ],
+            [
+                'nome' => 'transmissao_url',
+                'rotulo' => 'Transmissão (URL)',
+                'tipo' => 'text',
+                'largura' => 8,
+                'ajuda' => 'Link do direto (YouTube, Facebook…).'
+            ],
+            [
+                'nome' => 'observacoes',
+                'rotulo' => 'Observações',
+                'tipo' => 'textarea',
+                'largura' => 12
+            ],
         ];
     }
 
     private function regras(): array
     {
         return [
-            'nome'         => 'required|min_length[3]',
-            'fase_id'      => 'required|is_natural_no_zero',
+            'nome' => 'required|min_length[3]',
+            'fase_id' => 'required|is_natural_no_zero',
             'categoria_id' => 'required|is_natural_no_zero',
-            'data_evento'  => 'required|valid_date',
+            'data_evento' => 'required|valid_date',
         ];
     }
 
     private function dados(): array
     {
         $d = $this->request->getPost([
-            'nome', 'fase_id', 'categoria_id', 'local_id', 'escola_id',
-            'municipio_id', 'provincia_id', 'data_evento', 'data_fim_prevista',
-            'status', 'transmissao_url', 'observacoes',
+            'nome',
+            'fase_id',
+            'categoria_id',
+            'local_id',
+            'escola_id',
+            'municipio_id',
+            'provincia_id',
+            'data_evento',
+            'data_fim_prevista',
+            'status',
+            'transmissao_url',
+            'observacoes',
         ]);
 
         $d['data_fim_prevista'] = $d['data_fim_prevista'] ?: null;

@@ -1,4 +1,5 @@
 # Manual Operacional
+
 ## Concurso Nacional de Soletração — Angola
 
 **Do início da edição ao encerramento da fase nacional.**
@@ -165,5 +166,3 @@ Depois de marcar `Encerrado`, a edição fica como registo histórico. **Uma nov
 **Palavra:** por validar → validada (só assim entra em concurso)
 
 ---
-
-*Próximo documento: roteiros de aulas tutoriais com checkpoints, para formar coordenadores e júris antes do primeiro evento real.*

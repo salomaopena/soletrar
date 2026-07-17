@@ -13,7 +13,7 @@ use RuntimeException;
  * início e conclusão.
  */
 final class EventoService
-{
+{ 
     private const PAPEIS_MINIMOS = ['presidente', 'pronunciador'];
 
     public function __construct(private readonly ConnectionInterface $db)
