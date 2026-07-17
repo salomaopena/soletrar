@@ -57,15 +57,20 @@ foreach ($palavras as $p) { if (! $p->usada) { $porUsar++; } }
                        <th class="text-center">Estado</th><th class="text-end">Ação</th></tr></thead>
             <tbody>
               <?php foreach ($palavras as $p): ?>
+                <?php $estado = $estadoPorPalavra[$p->palavra_id] ?? null; ?>
                 <tr class="<?= $p->usada ? 'opacity-50' : '' ?>">
                   <td class="fw-semibold"><?= esc($p->palavra) ?>
                     <span class="texto-suave small d-block"><?= esc($p->silabacao ?? '') ?></span>
                   </td>
                   <td class="small"><?= esc(lang('Concurso.dificuldade_' . $p->dificuldade)) ?></td>
                   <td class="text-center">
-                    <?= $p->usada
-                        ? '<span class="badge-estado badge-estado--rascunho">Já saiu</span>'
-                        : '<span class="badge-estado badge-estado--validada">Por usar</span>' ?>
+                    <?php if (! $p->usada): ?>
+                      <span class="badge-estado badge-estado--validada">Por usar</span>
+                    <?php elseif ($estado === 'incorreta'): ?>
+                      <span class="badge-estado badge-estado--rejeitada">Saiu · errada</span>
+                    <?php else: ?>
+                      <span class="badge-estado badge-estado--rascunho">Saiu · acertada</span>
+                    <?php endif ?>
                   </td>
                   <td class="text-end">
                     <?php if (! $p->usada): ?>
@@ -75,6 +80,15 @@ foreach ($palavras as $p) { if (! $p->usada) { $porUsar++; } }
                         <button class="btn btn-sm btn-outline-danger" type="submit"
                                 aria-label="Remover"><i class="bi bi-x"></i></button>
                       </form>
+                    <?php elseif ($estado === 'incorreta'): ?>
+                      <form method="post"
+                            action="<?= site_url('admin/eventos/' . $evento->id . '/pool/' . $p->id . '/devolver') ?>"
+                            title="Foi soletrada errada — pode voltar a sair noutro round.">
+                        <?= csrf_field() ?>
+                        <button class="btn btn-sm btn-outline-secondary" type="submit">
+                          <i class="bi bi-arrow-counterclockwise"></i> Devolver
+                        </button>
+                      </form>
                     <?php endif ?>
                   </td>
                 </tr>
@@ -83,7 +97,9 @@ foreach ($palavras as $p) { if (! $p->usada) { $porUsar++; } }
           </table>
         </div>
         <p class="form-text p-3 mb-0">
-          Palavras já usadas não podem sair: o histórico das tentativas é intocável.
+          Palavras <strong>acertadas</strong> ficam definitivamente fora (o histórico é intocável).
+          Palavras <strong>erradas</strong> podem ser devolvidas ao conjunto para saírem
+          novamente noutro round deste mesmo evento.
         </p>
       <?php endif ?>
     </div>

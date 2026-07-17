@@ -54,6 +54,36 @@ class ProgressoesController extends AdminBaseController
         ]);
     }
 
+    /**
+     * Remove uma progressão registada por engano (ex.: candidato que
+     * nunca competiu foi indevidamente apurado antes de existir a
+     * salvaguarda em ClassificacaoService::homologar()). Fica auditado.
+     *
+     * NÃO retira automaticamente a inscrição de eventos onde já tenha
+     * sido confirmada como participante — se já houver participação
+     * criada na fase seguinte, reveja-a manualmente.
+     */
+    public function remover(int $id)
+    {
+        $progressao = db_connect()->table('progressoes_fase')->where('id', $id)->get()->getRow();
+
+        if ($progressao === null) {
+            return redirect()->back()->with('erro', 'Progressão não encontrada.');
+        }
+
+        db_connect()->table('progressoes_fase')->where('id', $id)->delete();
+
+        service('auditoria')->registar(
+            'remover_progressao', 'progressoes_fase', $id,
+            dadosAntes: (array) $progressao,
+            descricao: 'Progressão removida manualmente (correção de erro).'
+        );
+
+        return redirect()->back()->with('sucesso',
+            'Progressão removida. Se o candidato já tinha sido confirmado num evento da fase '
+            . 'seguinte, remova essa participação manualmente.');
+    }
+
     /** Progressão manual (repescagem / convite / substituição). */
     public function manual()
     {

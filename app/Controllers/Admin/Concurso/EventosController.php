@@ -33,9 +33,32 @@ class EventosController extends AdminBaseController
         }
 
         return view('admin/concurso/eventos_index', [
-            'eventos' => $model->orderBy('eventos_competicao.data_evento', 'DESC')->paginate(25),
-            'pager'   => $model->pager,
+            'eventos'    => $model->orderBy('eventos_competicao.data_evento', 'DESC')->paginate(25),
+            'pager'      => $model->pager,
+            // Eventos que partilham fase+categoria+escola/província com
+            // outro evento ativo — sinal de duplicação por engano (a
+            // causa real, descoberta em produção, de dois "concursos"
+            // paralelos com os mesmos candidatos e resultados divergentes).
+            'duplicados' => $this->eventosDuplicados(),
         ]);
+    }
+
+    /** @return int[] IDs de eventos com um "gémeo" ativo na mesma fase+categoria+território. */
+    private function eventosDuplicados(): array
+    {
+        $grupos = db_connect()->table('eventos_competicao')
+            ->select('fase_id, categoria_id, escola_id, provincia_id, GROUP_CONCAT(id) AS ids')
+            ->where('status !=', 'cancelado')
+            ->groupBy('fase_id, categoria_id, escola_id, provincia_id')
+            ->having('COUNT(*) >', 1)
+            ->get()->getResultArray();
+
+        $ids = [];
+        foreach ($grupos as $g) {
+            array_push($ids, ...array_map('intval', explode(',', $g['ids'])));
+        }
+
+        return $ids;
     }
 
     public function nova()
@@ -64,7 +87,24 @@ class EventosController extends AdminBaseController
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
-        model('EventoModel')->insert($this->dados());
+        $dados = $this->dados();
+
+        // BLOQUEIO (não apenas aviso): dentro de uma edição só pode existir
+        // UM evento ativo por fase+categoria+escola/província. Duas
+        // edições nunca colidem aqui, porque cada uma tem as suas
+        // próprias fases (fase_id já as distingue).
+        $duplicado = service('eventos')->encontrarDuplicado(
+            (int) $dados['fase_id'],
+            $dados['categoria_id'] !== null ? (int) $dados['categoria_id'] : null,
+            $dados['escola_id'],
+            $dados['provincia_id'],
+        );
+
+        if ($duplicado !== null) {
+            return redirect()->back()->withInput()->with('erro', $this->mensagemDuplicado($duplicado));
+        }
+
+        model('EventoModel')->insert($dados);
 
         return redirect()->to(self::ROTA)->with('sucesso', 'Evento criado.');
     }
@@ -75,9 +115,33 @@ class EventosController extends AdminBaseController
             return redirect()->back()->withInput()->with('erros', $this->validator->getErrors());
         }
 
-        model('EventoModel')->update($id, $this->dados());
+        $dados = $this->dados();
+
+        // Mesmo bloqueio ao editar: mudar a fase/categoria/escola de um
+        // evento não pode fazê-lo colidir com outro já existente.
+        $duplicado = service('eventos')->encontrarDuplicado(
+            (int) $dados['fase_id'],
+            $dados['categoria_id'] !== null ? (int) $dados['categoria_id'] : null,
+            $dados['escola_id'],
+            $dados['provincia_id'],
+            ignorarEventoId: $id,
+        );
+
+        if ($duplicado !== null) {
+            return redirect()->back()->withInput()->with('erro', $this->mensagemDuplicado($duplicado));
+        }
+
+        model('EventoModel')->update($id, $dados);
 
         return redirect()->to(self::ROTA)->with('sucesso', 'Evento atualizado.');
+    }
+
+    private function mensagemDuplicado(object $duplicado): string
+    {
+        return 'Já existe um evento ativo para esta mesma fase, categoria e escola/província: '
+            . "\"{$duplicado->nome}\" (estado: {$duplicado->status}). "
+            . 'Só pode existir um evento assim por edição. Se este for mesmo para substituir '
+            . 'o outro, cancele-o primeiro (editar → estado → Cancelado) e tente de novo.';
     }
 
     // --------------------------- Sala de controlo ---------------------------
@@ -93,6 +157,7 @@ class EventosController extends AdminBaseController
 
         return view('admin/concurso/evento_ver', [
             'evento'        => $evento,
+            'jaHomologado'  => service('classificacao')->foiHomologado($id),
             'juri'          => $this->juriDo($id),
             'participantes' => $this->participantesDo($id),
             'poolRestante'  => service('palavras')->restantesNoPool($id),
@@ -135,12 +200,23 @@ class EventosController extends AdminBaseController
     public function confirmarParticipantes(int $id)
     {
         try {
-            $n = service('eventos')->confirmarParticipantes($id);
+            $resultado = service('eventos')->confirmarParticipantes($id);
         } catch (RuntimeException $e) {
             return redirect()->back()->with('erro', $e->getMessage());
         }
 
-        return redirect()->back()->with('sucesso', "{$n} participante(s) confirmado(s).");
+        $msg = "{$resultado['confirmados']} participante(s) confirmado(s).";
+
+        if ($resultado['ignorados'] > 0) {
+            $msg .= ' ' . $resultado['ignorados'] . ' já estava(m) noutro evento desta MESMA fase '
+                . 'e não foi(ram) duplicado(s): ' . implode(', ', $resultado['ignoradosNomes'])
+                . '. Se isto for inesperado, confirme se não criou dois eventos para a mesma '
+                . 'fase/categoria/escola por engano.';
+
+            return redirect()->back()->with('aviso', $msg);
+        }
+
+        return redirect()->back()->with('sucesso', $msg);
     }
 
     /** Check-in no dia do evento. */
@@ -202,10 +278,32 @@ class EventosController extends AdminBaseController
 
         $termo = trim((string) $this->request->getGet('q'));
 
+        // Última tentativa de cada palavra usada NESTE evento, para saber
+        // se pode ser devolvida ao conjunto (só quando foi incorreta).
+        $ultimasTentativas = db_connect()->query(
+            'SELECT t.palavra_id, t.correta, t.apelacao_resultado
+               FROM tentativas_soletracao t
+               JOIN rounds_evento r ON r.id = t.round_id
+              WHERE r.evento_id = ?
+                AND t.id = (
+                    SELECT MAX(t2.id) FROM tentativas_soletracao t2
+                    JOIN rounds_evento r2 ON r2.id = t2.round_id
+                   WHERE r2.evento_id = ? AND t2.palavra_id = t.palavra_id
+                )',
+            [$id, $id]
+        )->getResult();
+
+        $estadoPorPalavra = [];
+        foreach ($ultimasTentativas as $t) {
+            $estadoPorPalavra[$t->palavra_id] = ((int) $t->correta === 1 || $t->apelacao_resultado === 'aceite')
+                ? 'acertada' : 'incorreta';
+        }
+
         return view('admin/concurso/evento_pool', [
-            'evento'    => $evento,
-            'termo'     => $termo,
-            'elegiveis' => service('palavras')->elegiveisParaEvento($id, $termo),
+            'evento'           => $evento,
+            'termo'            => $termo,
+            'estadoPorPalavra' => $estadoPorPalavra,
+            'elegiveis'        => service('palavras')->elegiveisParaEvento($id, $termo),
             'palavras'=> db_connect()->table('pool_palavras_evento ppe')
                 ->select('ppe.id, ppe.usada, p.id AS palavra_id, p.palavra,
                           p.dificuldade, p.silabacao')
@@ -281,6 +379,25 @@ class EventosController extends AdminBaseController
         ]);
     }
 
+    /** Devolve ao conjunto uma palavra soletrada incorretamente (RN de negócio no service). */
+    public function devolverAoPool(int $id, int $poolId)
+    {
+        $linha = db_connect()->table('pool_palavras_evento')
+            ->where(['id' => $poolId, 'evento_id' => $id])->get()->getRow();
+
+        if ($linha === null) {
+            return redirect()->back()->with('erro', 'Palavra não encontrada no conjunto.');
+        }
+
+        try {
+            service('palavras')->devolverAoPool($id, (int) $linha->palavra_id);
+        } catch (RuntimeException $e) {
+            return redirect()->back()->with('erro', $e->getMessage());
+        }
+
+        return redirect()->back()->with('sucesso', 'Palavra devolvida ao conjunto — pode voltar a sair.');
+    }
+
     /** HISTÓRICO DE TENTATIVAS do evento (round a round). */
     public function tentativas(int $id)
     {
@@ -303,6 +420,59 @@ class EventosController extends AdminBaseController
                 ->orderBy('r.numero_round')->orderBy('t.ordem_no_round')
                 ->get()->getResult(),
         ]);
+    }
+
+    /**
+     * Ecrã de confirmação (GET) antes de recalcular.
+     *
+     * Existe porque o recálculo é uma ação POST (corretamente — muda
+     * dados); aceder ao endereço diretamente pelo browser é um GET, que
+     * não bate com nenhuma rota POST e dava um erro genérico. Agora o
+     * GET mostra uma página simples a explicar a ação, com um botão que
+     * faz o POST de verdade.
+     */
+    public function confirmarRecalculo(int $id)
+    {
+        $evento = model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound();
+
+        return view('admin/concurso/confirmar_recalculo', [
+            'evento'       => $evento,
+            'jaHomologado' => service('classificacao')->foiHomologado($id),
+        ]);
+    }
+
+    /**
+     * Recalcula a classificação de um evento já concluído — sem repetir
+     * o palco. Necessário depois de uma correção às regras de cálculo
+     * (ex.: candidatos sem tentativas a aparecerem à frente de quem
+     * competiu de facto), ou depois de uma apelação tardia.
+     */
+    public function recalcular(int $id)
+    {
+        $evento = model('EventoModel')->find($id) ?? throw PageNotFoundException::forPageNotFound();
+
+        if ($evento->status !== 'concluido') {
+            return redirect()->back()->with('erro', 'Só é possível recalcular eventos concluídos.');
+        }
+
+        service('classificacao')->calcular($id);
+        service('auditoria')->registar('recalcular_classificacao', 'eventos_competicao', $id);
+
+        // Mostra já as 3 primeiras posições no próprio aviso — permite
+        // confirmar OS DADOS EM SI (lidos agora, direto da BD) sem
+        // depender da página pública, que pode estar a mostrar uma
+        // versão em cache de antes do recálculo.
+        $top3 = array_map(
+            static fn ($p) => $p['posicao_final'] . '.º ' . $p['nome_completo'],
+            service('relatorios')->classificacaoEvento($id)
+        );
+        $resumo = array_slice($top3, 0, 3);
+
+        return redirect()->back()->with('sucesso',
+            'Classificação recalculada agora mesmo — ' . implode(' · ', $resumo) . '. '
+            . 'Se a página pública ainda mostrar a ordem antiga, é cache: '
+            . 'faça Ctrl+F5 no navegador e confirme que "pagecache" não está em '
+            . 'Config/Filters.php ($required).');
     }
 
     /** Pauta do evento pronta a imprimir (lista de concorrentes). */

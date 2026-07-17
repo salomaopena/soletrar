@@ -46,9 +46,13 @@
               <td class="text-center"><?= (int) $linha['classe_atual'] ?>.ª</td>
               <td class="text-center fw-semibold"><?= (int) $linha['pontuacao_total'] ?></td>
               <td class="text-center">
-                <?= $linha['eliminado_round'] === null
-                    ? '<span class="badge-estado badge-estado--validada">Final</span>'
-                    : esc($linha['eliminado_round']) . '.º round' ?>
+                <?php if ((int) $linha['tentativas'] === 0): ?>
+                  <span class="badge-estado badge-estado--rascunho" title="Não chegou a soletrar nenhuma palavra">Não participou</span>
+                <?php elseif ($linha['eliminado_round'] === null): ?>
+                  <span class="badge-estado badge-estado--validada">Final</span>
+                <?php else: ?>
+                  <?= esc($linha['eliminado_round']) ?>.º round
+                <?php endif ?>
               </td>
             </tr>
           <?php endforeach ?>

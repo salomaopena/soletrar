@@ -44,7 +44,10 @@
           <tbody>
             <?php foreach ($inscricoes as $i): ?>
               <tr>
-                <td class="texto-suave small"><?= esc($i->numero_inscricao) ?></td>
+                <?php /* numero_inscricao pertence à tabela `candidatos` (é o
+                        MESMO valor para todas as inscrições deste candidato) —
+                        `inscricoes` não tem essa coluna. */ ?>
+                <td class="texto-suave small"><?= esc($candidato->numero_inscricao) ?></td>
                 <td><?= esc($i->edicao) ?></td>
                 <td class="texto-suave"><?= esc($i->categoria ?? '—') ?></td>
                 <td><?= view('components/badge_estado', ['estado' => $i->status]) ?></td>

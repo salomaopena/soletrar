@@ -41,7 +41,51 @@ final class EventoService
      *  - fases seguintes: quem tem progressão homologada para esta fase
      *    (progressoes_fase) dentro do território do evento.
      */
-    public function confirmarParticipantes(int $eventoId): int
+    /**
+     * @return array{confirmados: int, ignorados: int, ignoradosNomes: string[]}
+     */
+    /**
+     * Procura um evento ATIVO (não cancelado) que já ocupe a mesma
+     * fase + categoria + escola/província — a combinação que, dentro de
+     * uma edição, deve ser única (só pode existir UM evento "Fase
+     * Escolar" para a mesma escola e categoria ao mesmo tempo).
+     *
+     * NOTA: como `fase_id` pertence sempre a UMA edição concreta
+     * (fases_concurso.edicao_id), este cruzamento já distingue
+     * automaticamente edições diferentes — uma nova edição tem as suas
+     * próprias fases, logo nunca colide com eventos de edições
+     * anteriores, mesmo que sejam da mesma escola/categoria.
+     *
+     * Usa o operador NULL-safe `<=>` do MySQL para que escola_id/
+     * provincia_id nulos (ex.: fases não-escolares sem escola) sejam
+     * comparados corretamente — `NULL = NULL` é falso em SQL normal,
+     * mas aqui precisa de contar como "igual".
+     */
+    public function encontrarDuplicado(
+        int $faseId,
+        ?int $categoriaId,
+        ?int $escolaId,
+        ?int $provinciaId,
+        ?int $ignorarEventoId = null,
+    ): ?object {
+        $sql = 'SELECT id, nome, status
+                  FROM eventos_competicao
+                 WHERE fase_id = ?
+                   AND categoria_id  <=> ?
+                   AND escola_id     <=> ?
+                   AND provincia_id  <=> ?
+                   AND status != "cancelado"';
+        $params = [$faseId, $categoriaId, $escolaId, $provinciaId];
+
+        if ($ignorarEventoId !== null) {
+            $sql .= ' AND id != ?';
+            $params[] = $ignorarEventoId;
+        }
+
+        return $this->db->query($sql . ' LIMIT 1', $params)->getRow();
+    }
+
+    public function confirmarParticipantes(int $eventoId): array
     {
         $evento = $this->obterEvento($eventoId);
 
@@ -60,6 +104,26 @@ final class EventoService
             if ($evento->provincia_id !== null) {
                 $builder->where('i.provincia_id', $evento->provincia_id);
             }
+        }
+
+        // SALVAGUARDA (lacuna real corrigida): um candidato não pode
+        // competir em DOIS eventos da MESMA fase ao mesmo tempo — isso
+        // gera duas classificações paralelas e contraditórias para o que
+        // devia ser a mesma disputa (ex.: dois eventos "Escolar" criados
+        // por engano para a mesma escola/categoria, cada um com o seu
+        // palco independente). Excluem-se aqui os candidatos que já têm
+        // participação noutro evento ATIVO (não cancelado) desta fase.
+        $idsNoutroEvento = $this->db->table('participacoes pa')
+            ->select('pa.inscricao_id')
+            ->join('eventos_competicao ev2', 'ev2.id = pa.evento_id')
+            ->where('ev2.fase_id', $evento->fase_id)
+            ->where('pa.evento_id !=', $eventoId)
+            ->where('ev2.status !=', 'cancelado')
+            ->get()->getResultArray();
+        $idsExcluir = array_column($idsNoutroEvento, 'inscricao_id');
+
+        if ($idsExcluir !== []) {
+            $builder->whereNotIn('i.id', $idsExcluir);
         }
 
         $elegiveis = $builder->get()->getResultArray();
@@ -81,7 +145,23 @@ final class EventoService
             $this->db->table('participacoes')->ignore(true)->insertBatch($linhas);
         }
 
-        return count($linhas);
+        $nomesIgnorados = [];
+        if ($idsExcluir !== []) {
+            $nomesIgnorados = array_column(
+                $this->db->table('candidatos c')
+                    ->select('c.nome_completo')
+                    ->join('inscricoes i', 'i.candidato_id = c.id')
+                    ->whereIn('i.id', $idsExcluir)
+                    ->get()->getResultArray(),
+                'nome_completo'
+            );
+        }
+
+        return [
+            'confirmados'    => count($linhas),
+            'ignorados'      => count($idsExcluir),
+            'ignoradosNomes' => $nomesIgnorados,
+        ];
     }
 
     /** Check-in no dia do evento. */

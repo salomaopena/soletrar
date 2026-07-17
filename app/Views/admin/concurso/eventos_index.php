@@ -5,6 +5,21 @@
   <h1 class="h3 mb-0">Eventos e rounds</h1>
   <a class="btn btn-cns" href="<?= site_url('admin/eventos/nova') ?>"><i class="bi bi-plus-lg me-1"></i> Novo evento</a>
 </div>
+
+<?php if (! empty($duplicados)): ?>
+  <div class="alert alert-warning d-flex align-items-start gap-2">
+    <i class="bi bi-exclamation-triangle-fill mt-1"></i>
+    <div>
+      <strong>Eventos duplicados (criados antes desta proteção existir)</strong> — os eventos
+      marcados com <i class="bi bi-exclamation-triangle-fill text-warning"></i> abaixo partilham
+      a mesma fase, categoria e escola/província com outro evento ativo. Isto gera duas
+      classificações paralelas para os mesmos candidatos. <strong>Não é mais possível criar
+      um novo evento duplicado</strong> — o sistema bloqueia isso automaticamente — mas estes
+      já existiam. Cancele o que estiver a mais (editar → estado → Cancelado).
+    </div>
+  </div>
+<?php endif ?>
+
 <div class="cartao">
   <?php if (empty($eventos)): ?>
     <?= view('components/estado_vazio', [
@@ -17,8 +32,14 @@
                    <th>Estado</th><th class="text-end">Ações</th></tr></thead>
         <tbody>
           <?php foreach ($eventos as $e): ?>
-            <tr>
-              <td class="fw-semibold"><?= esc($e->nome) ?></td>
+            <tr class="<?= in_array($e->id, $duplicados, true) ? 'table-warning' : '' ?>">
+              <td class="fw-semibold">
+                <?php if (in_array($e->id, $duplicados, true)): ?>
+                  <i class="bi bi-exclamation-triangle-fill text-warning me-1"
+                     title="Partilha fase+categoria+escola/província com outro evento ativo"></i>
+                <?php endif ?>
+                <?= esc($e->nome) ?>
+              </td>
               <td class="texto-suave"><?= esc($e->fase) ?></td>
               <td class="texto-suave"><?= esc($e->categoria ?? '—') ?></td>
               <td class="small"><?= esc(data_exibir($e->data_evento, 'curta')) ?></td>

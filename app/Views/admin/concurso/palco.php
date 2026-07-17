@@ -3,13 +3,55 @@
 <?= $this->section('titulo') ?>Palco<?= $this->endSection() ?>
 
 <?= $this->section('conteudo') ?>
-<div class="d-flex flex-wrap justify-content-between align-items-center mb-4 gap-2">
+<div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
   <h1 class="h3 mb-0"><i class="bi bi-mic me-2"></i>Palco</h1>
   <div class="d-flex gap-2">
-    <button class="btn btn-cns-contorno btn-sm" id="btnAbrirRound">Abrir round</button>
-    <button class="btn btn-cns-contorno btn-sm" id="btnConcluirRound">Concluir round</button>
+    <div class="dropdown">
+      <button class="btn btn-cns-contorno btn-sm dropdown-toggle" type="button"
+              id="btnAbrirRound" data-bs-toggle="dropdown" <?= $roundAtual ? 'disabled' : '' ?>>
+        Abrir round
+      </button>
+      <div class="dropdown-menu p-3" style="min-width:280px">
+        <label class="form-label small" for="selTipoRound">Tipo de round</label>
+        <select class="form-select form-select-sm mb-2" id="selTipoRound">
+          <option value="eliminatorio">Eliminatório</option>
+          <option value="classificatorio">Classificatório</option>
+          <option value="desempate">Desempate</option>
+          <option value="final">Final</option>
+        </select>
+        <label class="form-label small" for="selDificuldadeRound">Dificuldade</label>
+        <select class="form-select form-select-sm mb-3" id="selDificuldadeRound">
+          <option value="muito_facil">Muito fácil</option>
+          <option value="facil">Fácil</option>
+          <option value="media" selected>Média</option>
+          <option value="dificil">Difícil</option>
+          <option value="muito_dificil">Muito difícil</option>
+        </select>
+        <button class="btn btn-cns btn-sm w-100" type="button" id="btnConfirmarAbrirRound">
+          Confirmar abertura
+        </button>
+        <p class="form-text mt-2 mb-0">
+          «Desempate»: use quando a homologação bloquear por empate nas vagas de qualificação.
+        </p>
+      </div>
+    </div>
+    <button class="btn btn-cns-contorno btn-sm" id="btnConcluirRound" <?= $roundAtual ? '' : 'disabled' ?>>
+      Concluir round
+    </button>
     <button class="btn btn-cns btn-sm" id="btnConcluirEvento">Concluir evento</button>
   </div>
+</div>
+
+<?php /* Estado do round — lido da BD ao carregar a página (nunca só de JS). */ ?>
+<div id="faixaRound" class="alert <?= $roundAtual ? 'alert-info' : 'alert-secondary' ?> py-2 mb-3">
+  <?php if ($roundAtual): ?>
+    <i class="bi bi-record-circle text-danger me-1"></i>
+    Round <strong>#<?= (int) $roundAtual->numero_round ?></strong> em curso ·
+    dificuldade <strong><?= esc(lang('Concurso.dificuldade_' . $roundAtual->dificuldade)) ?></strong> ·
+    <span id="contadorTentativas"><?= count($jaTentaramNoRound) ?></span> soletração(ões) já registada(s)
+  <?php else: ?>
+    <i class="bi bi-pause-circle me-1"></i> Nenhum round em curso. Clique em «Abrir round» para começar.
+  <?php endif ?>
 </div>
 
 <div id="aviso" class="alert d-none" role="alert"></div>
@@ -20,11 +62,17 @@
     <div class="cartao p-3 h-100">
       <h2 class="h6 mb-3">Em prova (<span id="nSobreviventes"><?= count($sobreviventes) ?></span>)</h2>
       <div class="list-group list-group-flush" id="listaSobreviventes">
+        <?php $jaTentou = array_column($jaTentaramNoRound, 'participacao_id'); ?>
         <?php foreach ($sobreviventes as $s): ?>
-          <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2"
-                  data-participacao="<?= (int) $s['id'] ?>">
+          <?php $feito = in_array((int) $s['id'], $jaTentou, true); ?>
+          <button class="list-group-item list-group-item-action d-flex justify-content-between align-items-center px-2 botao-candidato"
+                  data-participacao="<?= (int) $s['id'] ?>" <?= $feito ? 'data-ja-tentou="1"' : '' ?>>
             <span><span class="texto-suave me-2">#<?= esc($s['numero_concorrente']) ?></span>
-                  <?= esc($s['nome_completo']) ?></span>
+                  <?= esc($s['nome_completo']) ?>
+                  <?php if ($feito): ?>
+                    <i class="bi bi-check-circle-fill text-success ms-1" title="Já soletrou neste round"></i>
+                  <?php endif ?>
+            </span>
             <span class="badge text-bg-light"><?= (int) $s['pontuacao_total'] ?> pts</span>
           </button>
         <?php endforeach ?>
@@ -90,14 +138,41 @@
 <script>
 const eventoId = <?= (int) $eventoId ?>;
 const csrf = document.querySelector('meta[name="csrf-token"]').content;
-let roundId = null, tentativaId = null;
+
+// ESTADO INICIAL LIDO DO SERVIDOR — é o que faltava. Sem isto, recarregar
+// a página (ou abrir noutro separador) esquecia que já havia um round
+// aberto, e «Abrir round» respondia «já existe» sem o ecrã reagir.
+let roundId     = <?= $roundAtual->id ?? 'null' ?>;
+let tentativaId = null;
+
+const btnAbrir    = document.getElementById('btnAbrirRound');
+const btnConcluir = document.getElementById('btnConcluirRound');
+const faixaRound  = document.getElementById('faixaRound');
 
 const aviso = (msg, tipo = 'danger') => {
   const el = document.getElementById('aviso');
   el.className = `alert alert-${tipo}`;
   el.textContent = msg;
+  el.classList.remove('d-none');
   setTimeout(() => el.classList.add('d-none'), 5000);
 };
+
+/** Mantém os botões e a faixa de estado sincronizados com roundId. */
+function atualizarEstadoRound(info = null) {
+  btnAbrir.disabled    = roundId !== null;
+  btnConcluir.disabled = roundId === null;
+
+  if (roundId === null) {
+    faixaRound.className = 'alert alert-secondary py-2 mb-3';
+    faixaRound.innerHTML = '<i class="bi bi-pause-circle me-1"></i> '
+      + 'Nenhum round em curso. Clique em «Abrir round» para começar.';
+  } else if (info) {
+    faixaRound.className = 'alert alert-info py-2 mb-3';
+    faixaRound.innerHTML = `<i class="bi bi-record-circle text-danger me-1"></i> `
+      + `Round <strong>#${info.numero_round}</strong> em curso · `
+      + `dificuldade <strong>${info.dificuldade}</strong>`;
+  }
+}
 
 // Envia como form-data com o token CSRF em header (Config\Security::headerName).
 async function post(url, dados = {}) {
@@ -116,21 +191,57 @@ async function post(url, dados = {}) {
   let j;
   try { j = await r.json(); } catch { aviso('Resposta inesperada do servidor.'); return null; }
 
-  if (!j.sucesso) { aviso(j.erro || 'Erro'); return null; }
+  if (!j.sucesso) {
+    const msg = j.erro || 'Erro';
+
+    // Se o servidor disser «já há um round em curso», a página estava
+    // com o estado desatualizado — a solução é sincronizar, não insistir.
+    if (msg.toLowerCase().includes('já existe um round')) {
+      aviso('Já havia um round em curso — a atualizar o ecrã. Recarregue se precisar.', 'warning');
+      setTimeout(() => location.reload(), 1500);
+      return null;
+    }
+
+    // Conjunto de palavras esgotado nesta dificuldade: dizer O QUE FAZER,
+    // não só que acabou.
+    if (msg.toLowerCase().includes('esgotou')) {
+      const el = document.getElementById('aviso');
+      el.className = 'alert alert-warning';
+      el.innerHTML = msg
+        + ' — <a href="<?= site_url('admin/eventos/' . $eventoId . '/pool') ?>" target="_blank">'
+        + 'adicione mais palavras a essa dificuldade</a>, escolha outra dificuldade ao abrir o'
+        + ' próximo round, ou conclua o round agora com os candidatos já avaliados.';
+      el.classList.remove('d-none');
+      setTimeout(() => el.classList.add('d-none'), 9000);
+      return null;
+    }
+
+    aviso(msg);
+    return null;
+  }
   return j;
 }
 
-document.getElementById('btnAbrirRound').onclick = async () => {
-  const j = await post(`<?= site_url('admin/palco/round/abrir') ?>/${eventoId}`,
-                       { tipo: 'eliminatorio', dificuldade: 'media' });
-  if (j) { roundId = j.round_id; aviso('Round aberto.', 'success'); }
+document.getElementById('btnConfirmarAbrirRound').onclick = async () => {
+  const tipo        = document.getElementById('selTipoRound').value;
+  const dificuldade = document.getElementById('selDificuldadeRound').value;
+
+  const j = await post(`<?= site_url('admin/palco/round/abrir') ?>/${eventoId}`, { tipo, dificuldade });
+  if (j) {
+    roundId = j.round_id;
+    atualizarEstadoRound({ numero_round: '?', dificuldade });
+    aviso('Round aberto (' + tipo + '). Já pode chamar um candidato.', 'success');
+    bootstrap.Dropdown.getOrCreateInstance(btnAbrir).hide();
+  }
 };
 
 document.querySelectorAll('[data-participacao]').forEach(btn => {
   btn.onclick = async () => {
-    if (!roundId) return aviso('Abra um round primeiro.');
+    if (roundId === null) return aviso('Abra um round primeiro.');
+
     const j = await post(`<?= site_url('admin/palco/vez') ?>/${roundId}/${btn.dataset.participacao}`);
     if (!j) return;
+
     tentativaId = j.tentativa_id;
     const p = j.palavra;
     document.getElementById('pPalavra').textContent    = p.texto;
@@ -167,10 +278,16 @@ const avaliar = async (correta) => {
 document.getElementById('btnCerto').onclick   = () => avaliar(true);
 document.getElementById('btnErrado').onclick  = () => avaliar(false);
 
-document.getElementById('btnConcluirRound').onclick = async () => {
-  if (!roundId) return aviso('Nenhum round em curso.');
+btnConcluir.onclick = async () => {
+  if (roundId === null) return aviso('Nenhum round em curso.');
+
   const j = await post(`<?= site_url('admin/palco/round/concluir') ?>/${roundId}`);
-  if (j) { roundId = null; aviso('Round concluído. Recarregue para ver os sobreviventes.', 'success'); }
+  if (j) {
+    roundId = null;
+    atualizarEstadoRound();
+    aviso('Round concluído.', 'success');
+    setTimeout(() => location.reload(), 1200);   // atualiza sobreviventes
+  }
 };
 
 document.getElementById('btnConcluirEvento').onclick = async () => {
@@ -178,5 +295,8 @@ document.getElementById('btnConcluirEvento').onclick = async () => {
   const j = await post(`<?= site_url('admin/palco/evento/concluir') ?>/${eventoId}`);
   if (j) location.href = '<?= site_url('admin/eventos') ?>/' + eventoId;
 };
+
+// Estado inicial dos botões, já correto ao carregar a página.
+atualizarEstadoRound(<?= $roundAtual ? json_encode(['numero_round' => $roundAtual->numero_round, 'dificuldade' => lang('Concurso.dificuldade_' . $roundAtual->dificuldade)]) : 'null' ?>);
 </script>
 <?= $this->endSection() ?>

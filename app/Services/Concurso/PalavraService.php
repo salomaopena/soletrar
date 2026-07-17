@@ -173,6 +173,37 @@ final class PalavraService
         return $msg . ' Motivo: ' . implode('; ', $causas) . '.';
     }
 
+    /**
+     * Devolve ao conjunto uma palavra que foi soletrada INCORRETAMENTE.
+     *
+     * Uso de negócio: numa palavra falhada, é comum poder reaproveitá-la
+     * mais tarde no MESMO evento (outro round) — desde que ninguém a
+     * tenha acertado nem tenha havido apelação aceite. Nunca se devolve
+     * uma palavra que foi corretamente soletrada.
+     */
+    public function devolverAoPool(int $eventoId, int $palavraId): void
+    {
+        $tentativa = $this->db->table('tentativas_soletracao t')
+            ->select('t.correta, t.apelacao_resultado')
+            ->join('rounds_evento r', 'r.id = t.round_id')
+            ->where('r.evento_id', $eventoId)
+            ->where('t.palavra_id', $palavraId)
+            ->orderBy('t.id', 'DESC')
+            ->get()->getRow();
+
+        if ($tentativa === null) {
+            throw new RuntimeException(lang('Concurso.palavraNaoUsadaNoEvento'));
+        }
+
+        if ((int) $tentativa->correta === 1 || $tentativa->apelacao_resultado === 'aceite') {
+            throw new RuntimeException(lang('Concurso.palavraAcertadaNaoDevolve'));
+        }
+
+        $this->db->table('pool_palavras_evento')
+            ->where(['evento_id' => $eventoId, 'palavra_id' => $palavraId])
+            ->update(['usada' => 0]);
+    }
+
     /** Acrescenta palavras ESPECÍFICAS ao conjunto (escolha manual). */
     public function adicionarAoPool(int $eventoId, array $palavraIds): int
     {

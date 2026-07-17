@@ -24,11 +24,27 @@ final class ClassificacaoService
     {
     }
 
-    /** Calcula e grava posicao_final de todas as participações do evento. */
+    /**
+     * Calcula e grava posicao_final de todas as participações do evento.
+     *
+     * CORREÇÃO DE UM BUG REAL: `eliminado_round IS NULL` tem DOIS
+     * significados distintos que o código anterior confundia:
+     *   (a) o candidato sobreviveu a TODOS os rounds — venceu;
+     *   (b) o candidato nunca chegou a soletrar NENHUMA palavra (ficou
+     *       marcado "presente" mas nunca foi chamado ao palco) — não
+     *       competiu de facto.
+     * Os dois casos produzem o MESMO `NULL`, e o comparador tratava-os
+     * como equivalentes — um candidato com 0 pontos que nunca soletrou
+     * aparecia classificado ACIMA de quem soletrou várias palavras e só
+     * foi eliminado a meio. Corrigido: agora conta-se quantas tentativas
+     * o candidato teve; sem nenhuma, fica sempre no fim da tabela,
+     * independentemente do valor de eliminado_round.
+     */
     public function calcular(int $eventoId): array
     {
         $participacoes = $this->db->table('participacoes pa')
             ->select('pa.id, pa.eliminado_round, pa.pontuacao_total,
+                      COUNT(t.id) AS tentativas,
                       COALESCE(SUM(t.tempo_resposta_seg), 0) AS tempo_total')
             ->join('tentativas_soletracao t', 't.participacao_id = pa.id', 'left')
             ->where('pa.evento_id', $eventoId)
@@ -36,20 +52,35 @@ final class ClassificacaoService
             ->groupBy('pa.id')
             ->get()->getResultArray();
 
-        usort($participacoes, static function (array $a, array $b): int {
-            // NULL em eliminado_round = sobreviveu até ao fim → melhor.
-            $rA = $a['eliminado_round'] ?? PHP_INT_MAX;
-            $rB = $b['eliminado_round'] ?? PHP_INT_MAX;
+        // Ronda "efetiva" para ordenar: quem nunca teve uma única tentativa
+        // fica pior do que QUALQUER eliminado real (mesmo no round 1);
+        // quem sobreviveu a tudo (e chegou a competir) fica no topo.
+        $rondaEfetiva = static function (array $p): int {
+            if ((int) $p['tentativas'] === 0) {
+                return -1; // nunca competiu: sempre o pior caso
+            }
 
-            return [$rB, (int) $b['pontuacao_total'], -(int) $b['tempo_total']]
-               <=> [$rA, (int) $a['pontuacao_total'], -(int) $a['tempo_total']];
+            // O MySQLi devolve TODAS as colunas como string (mesmo as
+            // numéricas) salvo configuração especial que este projeto não
+            // usa. Sem o cast explícito, um eliminado_round não-nulo
+            // (ex.: "4") era devolvido como string — e com
+            // declare(strict_types=1) isso é um TypeError contra o
+            // ": int" desta função (só null passa incólume pelo ??).
+            return $p['eliminado_round'] !== null
+                ? (int) $p['eliminado_round']
+                : PHP_INT_MAX; // sobreviveu = melhor
+        };
+
+        usort($participacoes, static function (array $a, array $b) use ($rondaEfetiva): int {
+            return [$rondaEfetiva($b), (int) $b['pontuacao_total'], -(int) $b['tempo_total']]
+               <=> [$rondaEfetiva($a), (int) $a['pontuacao_total'], -(int) $a['tempo_total']];
         });
 
         $posicao = 0;
         $anterior = null;
 
         foreach ($participacoes as $indice => $p) {
-            $chave = [$p['eliminado_round'], $p['pontuacao_total'], $p['tempo_total']];
+            $chave = [$rondaEfetiva($p), $p['pontuacao_total'], $p['tempo_total']];
 
             // Empate absoluto partilha a posição (ex-aequo) — sinaliza desempate.
             if ($chave !== $anterior) {
@@ -80,8 +111,26 @@ final class ClassificacaoService
             throw new RuntimeException(lang('Concurso.eventoNaoConcluido'));
         }
 
+        // SALVAGUARDA (bug real corrigido): o estado do evento continua
+        // 'concluido' PARA SEMPRE mesmo depois de homologado (não há um
+        // estado "homologado" distinto) — sem esta verificação, clicar
+        // duas vezes em "Homologar" reenviava as notificações aos
+        // encarregados outra vez e duplicava o registo de auditoria
+        // (o que, por sua vez, duplicava o evento nas listagens públicas
+        // que se apoiam nesse registo para saber o que já foi publicado).
+        if ($this->foiHomologado($eventoId)) {
+            throw new RuntimeException(lang('Concurso.eventoJaHomologado'));
+        }
+
         // Empates não resolvidos nas posições de qualificação bloqueiam.
         $this->exigirSemEmpatesNasVagas($eventoId);
+
+        // SALVAGUARDA (bug real corrigido): nunca progredir para a fase
+        // seguinte quem ficou numa posição de apuramento sem ter tido
+        // uma única tentativa — sinal de presença mal marcada ou de
+        // classificação desatualizada. Força o coordenador a corrigir
+        // ANTES de a progressão contaminar a fase seguinte.
+        $this->exigirQualificadosTeremCompetido($eventoId);
 
         service('auditoria')->registar('homologar_resultados', 'eventos_competicao', $eventoId);
 
@@ -90,6 +139,40 @@ final class ClassificacaoService
 
         // Resultado passa a público + notificações aos encarregados.
         service('notificador')->notificarResultadosEvento($eventoId);
+    }
+
+    /** Já passou pela homologação? (única fonte de verdade: o registo de auditoria). */
+    public function foiHomologado(int $eventoId): bool
+    {
+        return $this->db->table('auditoria_logs')
+            ->where('entidade', 'eventos_competicao')
+            ->where('entidade_id', $eventoId)
+            ->where('acao', 'homologar_resultados')
+            ->countAllResults() > 0;
+    }
+
+    private function exigirQualificadosTeremCompetido(int $eventoId): void
+    {
+        $vagas = (int) $this->db->table('eventos_competicao ev')
+            ->select('f.vagas_proxima_fase')
+            ->join('fases_concurso f', 'f.id = ev.fase_id')
+            ->where('ev.id', $eventoId)->get()->getRow()->vagas_proxima_fase ?? 0;
+
+        if ($vagas === 0) {
+            return; // fase final: não há progressão a proteger
+        }
+
+        $semTentativas = $this->db->table('participacoes pa')
+            ->select('pa.id')
+            ->where('pa.evento_id', $eventoId)
+            ->where('pa.posicao_final <=', $vagas)
+            ->where('pa.posicao_final IS NOT NULL')
+            ->where('NOT EXISTS (SELECT 1 FROM tentativas_soletracao t WHERE t.participacao_id = pa.id)', null, false)
+            ->countAllResults();
+
+        if ($semTentativas > 0) {
+            throw new RuntimeException(lang('Concurso.qualificadoSemTentativas'));
+        }
     }
 
     private function exigirSemEmpatesNasVagas(int $eventoId): void

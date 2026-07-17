@@ -29,10 +29,39 @@ class NewsletterController extends BaseController
             'ip_inscricao'      => $this->request->getIPAddress(),
         ]);
 
-        // TODO: enviar e-mail de confirmação com o link
-        //   site_url('newsletter/confirmar/' . $token) via service('notificador').
+        // Envio direto (não via Notificador/templates, para não depender
+        // de um template semeado na BD só para este e-mail simples).
+        $this->enviarEmailConfirmacao($email, $token);
 
         return redirect()->back()->with('sucesso', 'Verifique o seu e-mail para confirmar a subscrição.');
+    }
+
+    private function enviarEmailConfirmacao(string $email, string $token): void
+    {
+        $link = site_url('newsletter/confirmar/' . $token);
+
+        $mensagem = service('email');
+        $mensagem->setTo($email);
+        $mensagem->setSubject('Confirme a sua subscrição — Concurso Nacional de Soletração');
+        $mensagem->setMailType('html');
+        $mensagem->setMessage(view('emails/layout_base', [
+            'assunto'  => 'Confirme a sua subscrição',
+            'conteudo' => 'Obrigado por subscrever as novidades do Concurso Nacional de Soletração.<br><br>'
+                . '<a href="' . esc($link, 'attr') . '" '
+                . 'style="display:inline-block;padding:10px 20px;background:#2AA8A3;color:#fff;'
+                . 'border-radius:999px;text-decoration:none;">Confirmar subscrição</a><br><br>'
+                . 'Se não pediu esta subscrição, pode ignorar esta mensagem.',
+        ]));
+
+        // Falha de envio não deve impedir o registo da subscrição —
+        // fica só por confirmar, e pode reenviar-se depois.
+        try {
+            $mensagem->send();
+        } catch (\Throwable $e) {
+            log_message('error', 'Newsletter: falha ao enviar e-mail de confirmação para {email}: {erro}', [
+                'email' => $email, 'erro' => $e->getMessage(),
+            ]);
+        }
     }
 
     public function confirmar(string $token)

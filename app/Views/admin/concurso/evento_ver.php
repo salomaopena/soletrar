@@ -46,11 +46,27 @@ $totalPool = array_sum($poolRestante);
       <a class="btn btn-cns" href="<?= site_url('admin/palco/' . $evento->id) ?>">
         <i class="bi bi-mic me-1"></i> Abrir o palco
       </a>
+    <?php elseif ($evento->status === 'concluido' && $jaHomologado): ?>
+      <span class="badge-estado badge-estado--validada">
+        <i class="bi bi-patch-check-fill me-1"></i> Já homologado
+      </span>
     <?php elseif ($evento->status === 'concluido' && auth()->user()->can('concurso.resultados.homologar')): ?>
       <form method="post" action="<?= site_url('admin/eventos/' . $evento->id . '/homologar') ?>"
-            onsubmit="return confirm('Homologar sela os resultados e apura a progressão. Continuar?')">
+            onsubmit="return confirm('Homologar sela os resultados, publica-os e apura a progressão. Só se faz uma vez. Continuar?')">
         <?= csrf_field() ?>
         <button class="btn btn-cns" type="submit"><i class="bi bi-check2-square me-1"></i> Homologar</button>
+      </form>
+    <?php endif ?>
+    <?php if ($evento->status === 'concluido'): ?>
+      <a class="btn btn-cns-contorno" href="<?= site_url('admin/eventos/' . $evento->id . '/premios') ?>">
+        <i class="bi bi-award me-1"></i> Prémios
+      </a>
+      <form method="post" action="<?= site_url('admin/eventos/' . $evento->id . '/recalcular') ?>"
+            onsubmit="return confirm('Recalcular substitui as posições finais atuais. Continuar?')">
+        <?= csrf_field() ?>
+        <button class="btn btn-cns-contorno" type="submit" title="Reaplica os critérios de classificação mais recentes">
+          <i class="bi bi-arrow-clockwise me-1"></i> Recalcular classificação
+        </button>
       </form>
     <?php endif ?>
   </div>

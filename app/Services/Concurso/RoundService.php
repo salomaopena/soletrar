@@ -17,6 +17,21 @@ final class RoundService
     {
     }
 
+    /**
+     * Devolve o round ATUALMENTE em curso do evento, ou null.
+     *
+     * Usado para o painel do palco recuperar o estado correto ao carregar
+     * a página — sem isto, o estado do round só existe em variável JS e
+     * perde-se a cada recarregamento (era exatamente o bug relatado:
+     * "abrir round" dizia que já havia um, mas o ecrã continuava vazio).
+     */
+    public function emCurso(int $eventoId): ?object
+    {
+        return $this->db->table('rounds_evento')
+            ->where(['evento_id' => $eventoId, 'status' => 'em_curso'])
+            ->get()->getRow();
+    }
+
     /** Abre o próximo round. Só pode haver UM round em curso por evento. */
     public function abrir(int $eventoId, array $config): int
     {

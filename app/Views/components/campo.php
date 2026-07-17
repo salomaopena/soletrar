@@ -30,6 +30,7 @@ $ajuda       = $ajuda       ?? null;
 $linhas      = $linhas      ?? 4;
 $erros       = $erros       ?? [];
 $placeholder = $placeholder ?? '';
+$lersomente   = ! empty($lerSomente);
 
 $id   = 'campo-' . $nome;
 $erro = is_array($erros) ? ($erros[$nome] ?? null) : null;
@@ -86,7 +87,8 @@ $erro = is_array($erros) ? ($erros[$nome] ?? null) : null;
            type="<?= esc($tipo, 'attr') ?>"
            value="<?= esc((string) $valor, 'attr') ?>"
            placeholder="<?= esc($placeholder, 'attr') ?>"
-           <?= $obrigatorio ? 'required' : '' ?>>
+           <?= $obrigatorio ? 'required' : '' ?>
+           <?= $lersomente ? 'readonly' : '' ?>>
   <?php endif ?>
 
   <?php if ($erro): ?>

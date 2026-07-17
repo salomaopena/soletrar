@@ -131,6 +131,9 @@ $ativo = static fn(string $prefixo): string => str_starts_with($rota, $prefixo) 
             <a class="nav-link <?= $ativo('admin/eventos') ?>" href="<?= site_url('admin/eventos') ?>">
               <i class="bi bi-trophy"></i><span class="rotulo">Eventos</span>
             </a>
+            <a class="nav-link <?= $ativo('admin/progressoes') ?>" href="<?= site_url('admin/progressoes') ?>">
+              <i class="bi bi-arrow-up-right"></i><span class="rotulo">Progressões</span>
+            </a>
           <?php endif ?>
           <?php if (auth()->user()->can('palavras.gerir')): ?>
             <a class="nav-link <?= $ativo('admin/palavras') ?>" href="<?= site_url('admin/palavras') ?>">

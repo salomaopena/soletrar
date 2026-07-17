@@ -44,13 +44,16 @@ final class RelatorioService
         return $this->db->table('participacoes pa')
             ->select('pa.posicao_final, pa.numero_concorrente, pa.pontuacao_total,
                       pa.eliminado_round, pa.tempo_total_seg,
+                      COUNT(t.id) AS tentativas,
                       c.nome_completo, c.classe_atual, e.nome AS escola')
             ->join('inscricoes i', 'i.id = pa.inscricao_id')
             ->join('candidatos c', 'c.id = i.candidato_id')
             ->join('escolas e', 'e.id = i.escola_id')
+            ->join('tentativas_soletracao t', 't.participacao_id = pa.id', 'left')
             ->where('pa.evento_id', $eventoId)
             ->where('pa.posicao_final IS NOT NULL')
-            ->orderBy('pa.posicao_final')
+            ->groupBy('pa.id, c.nome_completo, c.classe_atual, e.nome')
+            ->orderBy('pa.posicao_final, pa.pontuacao_total ASC, pa.tempo_total_seg ASC')
             ->get()->getResultArray();
     }
 

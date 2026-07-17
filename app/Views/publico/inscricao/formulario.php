@@ -36,7 +36,7 @@
       </div>
     </div>
     <div class="row">
-      <div class="col-md-4">
+      <div class="col-md-6">
         <?= view('components/campo', [
           'nome' => 'data_nascimento',
           'rotulo' => 'Data de nascimento',
@@ -46,25 +46,14 @@
           'erros' => session('erros')
         ]) ?>
       </div>
-      <div class="col-md-4">
+      <div class="col-md-6">
         <?= view('components/campo', [
           'nome' => 'genero',
           'rotulo' => 'Género',
           'tipo' => 'select',
           'obrigatorio' => true,
-          'opcoes' => ['M' => 'Masculino','F' => 'Feminino'],
+          'opcoes' => ['M' => 'Masculino', 'F' => 'Feminino'],
           'valor' => old('genero'),
-          'erros' => session('erros')
-        ]) ?>
-      </div>
-      <div class="col-md-4">
-        <?= view('components/campo', [
-          'nome' => 'classe_atual',
-          'rotulo' => 'Classe',
-          'tipo' => 'select',
-          'obrigatorio' => true,
-          'opcoes' => [1 => '1.ª', 2 => '2.ª', 3 => '3.ª', 4 => '4.ª', 5 => '5.ª', 6 => '6.ª', 7 => '7.ª', 8 => '8.ª'],
-          'valor' => old('classe_atual'),
           'erros' => session('erros')
         ]) ?>
       </div>
@@ -200,16 +189,33 @@
           </select>
         </div>
       </div>
-      <?= view('components/campo', [
-        'nome' => 'categoria_id',
-        'rotulo' => 'Categoria',
-        'tipo' => 'select',
-        'obrigatorio' => true,
-        'opcoes' => array_column($categorias, 'nome', 'id'),
-        'valor' => old('categoria_id'),
-        'ajuda' => 'A categoria deve corresponder à classe/idade do candidato.',
-        'erros' => session('erros')
-      ]) ?>
+      <div class="row">
+        <div class="col-md-6">
+
+          <?= view('components/campo', [
+            'nome' => 'categoria_id',
+            'rotulo' => 'Categoria',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => array_column($categorias, 'nome', 'id'),
+            'valor' => old('categoria_id'),
+            //'ajuda' => 'A categoria deve corresponder à classe/idade do candidato.',
+            'erros' => session('erros')
+          ]) ?>
+        </div>
+        <div class="col-md-6">
+          <?= view('components/campo', [
+            'nome' => 'classe_atual',
+            'rotulo' => 'Classe',
+            'tipo' => 'select',
+            'obrigatorio' => true,
+            'opcoes' => [6 => '6.ª', 7 => '7.ª', 8 => '8.ª'],
+            'valor' => old('classe_atual'),
+            'erros' => session('erros')
+          ]) ?>
+        </div>
+      </div>
+
 
       <h2 class="h5 mb-3 mt-3">Encarregado de educação</h2>
       <div class="row">

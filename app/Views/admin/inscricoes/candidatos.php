@@ -61,7 +61,7 @@ $qs = http_build_query(array_filter($filtros, static fn ($v) => $v !== '' && $v 
       <label class="form-label small" for="classe">Classe</label>
       <select class="form-select form-select-sm" id="classe" name="classe">
         <option value="">Todas</option>
-        <?php for ($i = 1; $i <= 8; $i++): ?>
+        <?php for ($i = 6; $i <= 8; $i++): ?>
           <option value="<?= $i ?>" <?= (string) $filtros['classe'] === (string) $i ? 'selected' : '' ?>>
             <?= $i ?>.ª
           </option>

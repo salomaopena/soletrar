@@ -29,10 +29,22 @@ class PalcoController extends AdminBaseController
     /** Painel principal: sobreviventes, pool restante, round atual. */
     public function painel(int $eventoId)
     {
+        $roundAtual = service('rounds')->emCurso($eventoId);
+
         return view('admin/concurso/palco', [
             'eventoId'      => $eventoId,
             'sobreviventes' => service('rounds')->sobreviventes($eventoId),
             'poolRestante'  => service('palavras')->restantesNoPool($eventoId),
+            // Estado real do round, lido da BD — não de uma variável JS que
+            // se perde ao recarregar a página (Fase 11: correção do palco).
+            'roundAtual'    => $roundAtual,
+            // Quem já soletrou NESTE round, para não o voltar a chamar.
+            'jaTentaramNoRound' => $roundAtual
+                ? db_connect()->table('tentativas_soletracao')
+                    ->select('participacao_id')
+                    ->where('round_id', $roundAtual->id)
+                    ->get()->getResultArray()
+                : [],
         ]);
     }
 

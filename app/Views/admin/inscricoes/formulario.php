@@ -35,7 +35,7 @@ Usa o MESMO InscricaoService do formulário público (Fase 6). */ ?>
         <?= view('components/campo', ['nome' => 'genero', 'rotulo' => 'Género', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => ['M' => 'Masculino','F' => 'Feminino'], 'valor' => old('genero'), 'erros' => $erros]) ?>
       </div>
       <div class="col-md-4">
-        <?= view('components/campo', ['nome' => 'classe_atual', 'rotulo' => 'Classe', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => [1 => '1.ª', 2 => '2.ª', 3 => '3.ª', 4 => '4.ª', 5 => '5.ª', 6 => '6.ª', 7 => '7.ª', 8 => '8.ª'], 'valor' => old('classe_atual'), 'erros' => $erros]) ?>
+        <?= view('components/campo', ['nome' => 'classe_atual', 'rotulo' => 'Classe', 'tipo' => 'select', 'obrigatorio' => true, 'opcoes' => [6 => '6.ª', 7 => '7.ª', 8 => '8.ª'], 'valor' => old('classe_atual'), 'erros' => $erros]) ?>
       </div>
       <div class="col-md-4">
         <?= view('components/campo', ['nome' => 'turma', 'rotulo' => 'Turma', 'valor' => old('turma'), 'erros' => $erros]) ?></div>

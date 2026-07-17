@@ -34,7 +34,8 @@
     <div class="table-responsive">
       <table class="table tabela-cns align-middle mb-0">
         <thead><tr><th>Candidato</th><th>De</th><th>Para</th><th>Evento de origem</th>
-                   <th class="text-center">Pos.</th><th>Tipo</th><th>Homologado por</th></tr></thead>
+                   <th class="text-center">Pos.</th><th>Tipo</th><th>Homologado por</th>
+                   <th class="text-end">Ação</th></tr></thead>
         <tbody>
           <?php foreach ($progressoes as $p): ?>
             <tr>
@@ -52,6 +53,15 @@
                 <?php endif ?>
               </td>
               <td class="texto-suave small"><?= esc($p->aprovada_por ?? '—') ?></td>
+              <td class="text-end">
+                <form method="post" action="<?= site_url('admin/progressoes/' . $p->id . '/remover') ?>"
+                      onsubmit="return confirm('Remover esta progressão? Se o candidato já foi confirmado num evento da fase seguinte, tem de o remover à parte.')">
+                  <?= csrf_field() ?>
+                  <button class="btn btn-sm btn-outline-danger" type="submit" title="Remover progressão">
+                    <i class="bi bi-trash"></i>
+                  </button>
+                </form>
+              </td>
             </tr>
           <?php endforeach ?>
         </tbody>

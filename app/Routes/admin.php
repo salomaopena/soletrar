@@ -85,6 +85,8 @@ $routes->group('admin', [
 
         $routes->get('(:num)',        'Concurso\EventosController::ver/$1');        // sala de controlo
         $routes->get('(:num)/lista',  'Concurso\EventosController::lista/$1');      // pauta imprimível
+        $routes->get('(:num)/recalcular',  'Concurso\EventosController::confirmarRecalculo/$1');
+        $routes->post('(:num)/recalcular', 'Concurso\EventosController::recalcular/$1');
 
         $routes->post('(:num)/juri',                    'Concurso\EventosController::atribuirJuri/$1');
         $routes->post('(:num)/juri/(:num)/remover',     'Concurso\EventosController::removerJuri/$1/$2');
@@ -92,7 +94,13 @@ $routes->group('admin', [
         $routes->post('(:num)/presenca/(:num)',         'Concurso\EventosController::presenca/$1/$2');
         $routes->post('(:num)/pool',                'Concurso\EventosController::montarPool/$1');
         $routes->get('(:num)/pool',                 'Concurso\EventosController::pool/$1');
-        $routes->post('(:num)/pool/(:num)/remover', 'Concurso\EventosController::removerDoPool/$1/$2');
+        $routes->post('(:num)/pool/(:num)/remover',  'Concurso\EventosController::removerDoPool/$1/$2');
+        $routes->post('(:num)/pool/(:num)/devolver', 'Concurso\EventosController::devolverAoPool/$1/$2');
+
+        // Prémios (só faz sentido depois de o evento estar concluído)
+        $routes->get('(:num)/premios',           'Concurso\PremiacaoController::ver/$1');
+        $routes->post('(:num)/premios/atribuir', 'Concurso\PremiacaoController::atribuir/$1');
+        $routes->get('(:num)/premios/imprimir',  'Concurso\PremiacaoController::imprimir/$1');
         $routes->get('(:num)/tentativas',           'Concurso\EventosController::tentativas/$1');
         $routes->get('(:num)/rounds',               'Concurso\EventosController::rounds/$1');
         $routes->post('(:num)/pool/adicionar',      'Concurso\EventosController::adicionarAoPool/$1');
@@ -107,6 +115,7 @@ $routes->group('admin', [
         static function ($routes) {
             $routes->get('/',      'Concurso\ProgressoesController::index');
             $routes->post('manual','Concurso\ProgressoesController::manual');
+            $routes->post('(:num)/remover', 'Concurso\ProgressoesController::remover/$1');
         });
 
     // ---------- Palco ao vivo ----------
